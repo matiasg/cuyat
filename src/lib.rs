@@ -6,6 +6,7 @@ type Position = SVector<f32, 3>;
 type Fpp = SVector<f32, 2>; // Focal Plane Point
 pub type FPStars = Vec<Fpp>;
 
+#[derive(Clone)]
 pub struct Sky {
     stars: Vec<Star>,
 }
@@ -37,6 +38,7 @@ impl Sky {
     }
 }
 
+#[derive(Clone)]
 pub struct FoV {
     half_fov_x: f32,
     half_fov_y: f32,
