@@ -1,4 +1,4 @@
-use nalgebra::{Dyn, OMatrix, SVector, UnitQuaternion, U3};
+use nalgebra::{Dyn, Matrix, Matrix3, OMatrix, SVector, UnitQuaternion, U3};
 
 type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
@@ -35,6 +35,12 @@ impl Sky {
         Self {
             stars: self.stars.iter().map(|&s| q * s).collect(),
         }
+    }
+
+    pub fn random_with_stars(n: usize) -> Self {
+        let stars: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
+        let sky = Self { stars };
+        sky.seen_from(Star::new(5.0, 5.0, 5.0))
     }
 }
 
