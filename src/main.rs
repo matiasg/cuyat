@@ -35,7 +35,7 @@ impl SkyView {
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        self.q *= UnitQuaternion::from_euler_angles(x * 0.1, y * 0.1, z * 0.1);
+        self.q = UnitQuaternion::from_euler_angles(x * 0.1, y * 0.1, z * 0.1) * self.q;
     }
 }
 
