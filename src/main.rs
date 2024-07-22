@@ -14,6 +14,7 @@ struct SkyView {
     pub sky: Sky,
     fov: FoV,
     q: UnitQuaternion<f32>,
+    step: f32,
     margin: usize,
 }
 
@@ -23,16 +24,19 @@ impl SkyView {
         let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
         let sky = Sky::random_with_stars(nstars);
         let fov = FoV::new(2.0, 2.0);
+        let step = 0.1;
         Self {
             sky,
             fov,
             q,
+            step,
             margin: 1,
         }
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        self.q = UnitQuaternion::from_euler_angles(x * 0.1, y * 0.1, z * 0.1) * self.q;
+        self.q =
+            UnitQuaternion::from_euler_angles(x * self.step, y * self.step, z * self.step) * self.q;
     }
 
     fn draw_portion(&self, quat: UnitQuaternion<f32>, p: &Printer, x_max: u8, y_max: u8) {
@@ -79,7 +83,10 @@ impl View for SkyView {
         self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
 
         p.with_color(style, |printer| {
-            printer.print((1, 0), format!("distance: {:.6}", self.distance()).as_str())
+            printer.print(
+                (1, 0),
+                format!("distance: {:.6}. Step: {:.4}", self.distance(), self.step).as_str(),
+            )
         });
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
@@ -105,6 +112,12 @@ impl View for SkyView {
             }
             Event::Char('R') => {
                 self.rotate(0.0, 0.0, 1.0);
+            }
+            Event::Char('s') => {
+                self.step /= 2.0;
+            }
+            Event::Char('S') => {
+                self.step *= 2.0;
             }
             _ => return EventResult::Ignored,
         }
