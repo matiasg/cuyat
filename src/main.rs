@@ -53,6 +53,10 @@ impl SkyView {
             });
         }
     }
+    fn distance(&self) -> f32 {
+        let (roll, pitch, yaw) = self.q.euler_angles();
+        (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
+    }
 }
 
 impl View for SkyView {
@@ -61,7 +65,7 @@ impl View for SkyView {
         let x_mid = x_max / 2;
         let y_max = p.size.y as u8;
 
-        let left = cursive::Vec2::new(1, 1);
+        let left = cursive::Vec2::new(0, 2);
         let left_printer = p.offset(left);
         self.draw_portion(self.q, &left_printer, x_mid, y_max);
 
@@ -70,9 +74,13 @@ impl View for SkyView {
             p.with_color(style, |printer| printer.print((x_mid, y), "|"))
         }
 
-        let right = cursive::Vec2::new(x_mid as usize + self.margin, 1);
+        let right = cursive::Vec2::new(x_mid as usize + self.margin, 2);
         let right_printer = p.offset(right);
         self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
+
+        p.with_color(style, |printer| {
+            printer.print((1, 0), format!("distance: {:.6}", self.distance()).as_str())
+        });
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         Vec2::new(121, 32)
