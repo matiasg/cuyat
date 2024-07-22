@@ -68,14 +68,19 @@ impl FoV {
         sky.stars.iter().map(|&s| self.project(s)).collect()
     }
 
-    pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> (u8, u8) {
+    pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
         let fpp = self.project(star);
         let x = ((fpp[0] + 1.0) / 2.0 * (maxx as f32)).floor() as u8;
         let y = ((fpp[1] + 1.0) / 2.0 * (maxy as f32)).floor() as u8;
-        (x, y)
+
+        if inside(x, 0, maxx) && inside(y, 0, maxy) {
+            Some((x, y))
+        } else {
+            None
+        }
     }
 
-    pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<(u8, u8)> {
+    pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<Option<(u8, u8)>> {
         sky.stars
             .iter()
             .map(|&s| self.to_screen(s, maxx, maxy))
@@ -88,6 +93,10 @@ impl FoV {
             half_fov_y: y_rad.tan() / 2.0,
         }
     }
+}
+
+fn inside(x: u8, minval: u8, maxval: u8) -> bool {
+    minval <= x && x <= maxval
 }
 
 #[cfg(test)]
