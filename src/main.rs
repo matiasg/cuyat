@@ -1,9 +1,11 @@
+use std::f32::consts::PI;
+
 use cursive::event::{Event, EventResult};
 use cursive::theme::Color;
 use cursive::theme::ColorStyle;
 use cursive::view::View;
 use cursive::{Printer, Vec2};
-use nalgebra::UnitQuaternion;
+use nalgebra::{OVector, UnitQuaternion, U3};
 
 use cuyat::{FoV, Sky};
 
@@ -17,7 +19,8 @@ struct SkyView {
 
 impl SkyView {
     fn new(nstars: usize) -> Self {
-        let q: UnitQuaternion<f32> = UnitQuaternion::default();
+        let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
+        let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
         let sky = Sky::random_with_stars(nstars);
         let fov = FoV::new(2.0, 2.0);
         Self {
