@@ -1,4 +1,4 @@
-use nalgebra::{Dyn, Matrix, Matrix3, OMatrix, SVector, UnitQuaternion, U3};
+use nalgebra::{Dyn, OMatrix, SVector, UnitQuaternion, U3};
 
 type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
