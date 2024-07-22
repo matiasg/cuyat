@@ -1,12 +1,10 @@
 use cursive::event::{Event, EventResult};
+use cursive::theme::Color;
 use cursive::theme::ColorStyle;
 use cursive::view::View;
-use cursive::views::Canvas;
-use cursive::{theme::Color, view::Resizable};
 use cursive::{Printer, Vec2};
 use nalgebra::UnitQuaternion;
 
-mod draw;
 use cuyat::{FoV, Sky, Star};
 
 fn data() -> (Sky, FoV) {
