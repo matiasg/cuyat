@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 cursive = "0.20"
-nalgebra = "0.33.0"
+nalgebra = { version = "0.33.0", features = ["rand"] }
