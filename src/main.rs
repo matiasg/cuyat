@@ -7,17 +7,6 @@ use nalgebra::UnitQuaternion;
 
 use cuyat::{FoV, Sky, Star};
 
-fn data() -> (Sky, FoV) {
-    let sky = Sky::from(vec![
-        Star::new(0.0, 0.0, 2.0),
-        Star::new(3.0, 8.0, 5.0),
-        Star::new(-1.0, 1.0, 2.0),
-        Star::new(-3.0, 4.0, 5.0),
-    ]);
-    let fov = FoV::new(2.5, 2.5);
-    (sky, fov)
-}
-
 #[derive(Clone)]
 struct SkyView {
     pub sky: Sky,
@@ -26,9 +15,10 @@ struct SkyView {
 }
 
 impl SkyView {
-    fn new() -> Self {
+    fn new(nstars: usize) -> Self {
         let q: UnitQuaternion<f32> = UnitQuaternion::default();
-        let (sky, fov) = data();
+        let sky = Sky::random_with_stars(nstars);
+        let fov = FoV::new(2.0, 2.0);
         Self { sky, fov, q }
     }
 
@@ -51,7 +41,10 @@ impl View for SkyView {
             .enumerate()
         {
             p.with_color(style, |printer| {
-                printer.print((fps.0, fps.1), format!("{i}").as_str());
+                printer.print(
+                    (fps.0, fps.1),
+                    std::str::from_utf8(&[i as u8 + 97]).unwrap(),
+                );
             });
         }
     }
@@ -61,22 +54,22 @@ impl View for SkyView {
 
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
-            Event::Char('j') => {
+            Event::Char('p') => {
                 self.rotate(-1.0, 0.0, 0.0);
             }
-            Event::Char('k') => {
+            Event::Char('P') => {
                 self.rotate(1.0, 0.0, 0.0);
             }
-            Event::Char('l') => {
+            Event::Char('y') => {
                 self.rotate(0.0, 1.0, 0.0);
             }
-            Event::Char('h') => {
+            Event::Char('Y') => {
                 self.rotate(0.0, -1.0, 0.0);
             }
-            Event::Char('i') => {
+            Event::Char('r') => {
                 self.rotate(0.0, 0.0, -1.0);
             }
-            Event::Char('o') => {
+            Event::Char('R') => {
                 self.rotate(0.0, 0.0, 1.0);
             }
             _ => return EventResult::Ignored,
@@ -86,7 +79,7 @@ impl View for SkyView {
 }
 
 fn main() {
-    let sky_view: SkyView = SkyView::new();
+    let sky_view: SkyView = SkyView::new(12);
     let mut siv = cursive::default();
     siv.add_layer(sky_view);
     siv.add_global_callback('q', |s| s.quit());
