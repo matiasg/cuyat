@@ -69,6 +69,9 @@ impl FoV {
     }
 
     pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
+        if star[2] <= 0.0 {
+            return None;
+        }
         let fpp = self.project(star);
         let x = ((fpp[0] + 1.0) / 2.0 * (maxx as f32)).floor() as u8;
         let y = ((fpp[1] + 1.0) / 2.0 * (maxy as f32)).floor() as u8;
