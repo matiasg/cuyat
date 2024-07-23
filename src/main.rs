@@ -1,4 +1,7 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::f32::consts::PI;
+use std::rc::Rc;
 
 use cursive::event::{Event, EventResult};
 use cursive::theme::Color;
@@ -14,14 +17,14 @@ struct SkyView {
     pub sky: Sky,
     fov: FoV,
     q: UnitQuaternion<f32>,
-    total: f32,
+    total: Rc<RefCell<f32>>,
     moves: usize,
     step: f32,
     margin: usize,
 }
 
 impl SkyView {
-    fn new(nstars: usize) -> Self {
+    fn new(nstars: usize, total: Rc<RefCell<f32>>) -> Self {
         let (q, sky) = make_random(nstars);
         let fov = FoV::new(2.0, 2.0);
         Self {
@@ -30,7 +33,7 @@ impl SkyView {
             q,
             step: 0.1,
             margin: 1,
-            total: 0.0,
+            total,
             moves: 0,
         }
     }
@@ -65,7 +68,8 @@ impl SkyView {
     }
 
     fn restart(&mut self) {
-        self.total += self.distance() * (self.moves + 20) as f32;
+        // self.total += self.distance() * (self.moves + 20) as f32;
+        *(*self.total).borrow_mut() += self.distance() * (self.moves + 20) as f32;
         let (q, sky) = make_random(self.sky.len());
         self.q = q;
         self.sky = sky;
@@ -107,7 +111,7 @@ impl View for SkyView {
                     self.distance(),
                     self.step,
                     self.moves,
-                    self.total
+                    (*self.total).borrow(),
                 )
                 .as_str(),
             )
@@ -153,9 +157,14 @@ impl View for SkyView {
 }
 
 fn main() {
-    let sky_view: SkyView = SkyView::new(12);
+    let total = Rc::new(RefCell::new(0f32));
+    let sky_view: SkyView = SkyView::new(12, Rc::clone(&total));
     let mut siv = cursive::default();
     siv.add_layer(sky_view);
     siv.add_global_callback('q', |s| s.quit());
     siv.run();
+    println!(
+        "\n\n\n ====>>>> total: {:?} <<<====\n\n\n",
+        (*total).borrow()
+    );
 }
