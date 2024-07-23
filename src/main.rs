@@ -24,6 +24,7 @@ struct SkyView {
 struct Scoring {
     total: f32,
     moves: usize,
+    games: usize,
 }
 
 impl Scoring {
@@ -33,17 +34,19 @@ impl Scoring {
 
     fn score_and_reset(&mut self, add: f32) {
         self.total += add * (self.moves as f32 + 20.0);
+        self.games += 1;
         self.moves = 0;
     }
 
     fn get_score(&self) -> f32 {
-        self.total
+        self.total / (self.games as f32)
     }
 
     fn default() -> Scoring {
         Scoring {
             total: 0f32,
             moves: 0,
+            games: 0,
         }
     }
 }
@@ -141,11 +144,12 @@ impl View for SkyView {
             printer.print(
                 (1, 0),
                 format!(
-                    "distance: {:.6}. Step: {:.4}.  m: {}. TOTAL: {:.6}",
+                    "distance: {:.6}. Step: {:.4},  moves: {}, score: {:.6}, games: {}",
                     self.distance(),
                     self.step,
                     (*self.scoring).borrow().moves,
                     (*self.scoring).borrow().get_score(),
+                    (*self.scoring).borrow().games,
                 )
                 .as_str(),
             )
