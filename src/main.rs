@@ -14,29 +14,31 @@ struct SkyView {
     pub sky: Sky,
     fov: FoV,
     q: UnitQuaternion<f32>,
+    total: f32,
+    moves: usize,
     step: f32,
     margin: usize,
 }
 
 impl SkyView {
     fn new(nstars: usize) -> Self {
-        let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
-        let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
-        let sky = Sky::random_with_stars(nstars);
+        let (q, sky) = make_random(nstars);
         let fov = FoV::new(2.0, 2.0);
-        let step = 0.1;
         Self {
             sky,
             fov,
             q,
-            step,
+            step: 0.1,
             margin: 1,
+            total: 0.0,
+            moves: 0,
         }
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
         self.q =
             UnitQuaternion::from_euler_angles(x * self.step, y * self.step, z * self.step) * self.q;
+        self.moves += 1;
     }
 
     fn draw_portion(&self, quat: UnitQuaternion<f32>, p: &Printer, x_max: u8, y_max: u8) {
@@ -61,6 +63,21 @@ impl SkyView {
         let (roll, pitch, yaw) = self.q.euler_angles();
         (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
     }
+
+    fn restart(&mut self) {
+        self.total += self.distance() * (self.moves + 20) as f32;
+        let (q, sky) = make_random(self.sky.len());
+        self.q = q;
+        self.sky = sky;
+        self.moves = 0;
+    }
+}
+
+fn make_random(nstars: usize) -> (nalgebra::Unit<nalgebra::Quaternion<f32>>, Sky) {
+    let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
+    let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
+    let sky = Sky::random_with_stars(nstars);
+    (q, sky)
 }
 
 impl View for SkyView {
@@ -85,7 +102,14 @@ impl View for SkyView {
         p.with_color(style, |printer| {
             printer.print(
                 (1, 0),
-                format!("distance: {:.6}. Step: {:.4}", self.distance(), self.step).as_str(),
+                format!(
+                    "distance: {:.6}. Step: {:.4}.  m: {}. TOTAL: {:.6}",
+                    self.distance(),
+                    self.step,
+                    self.moves,
+                    self.total
+                )
+                .as_str(),
             )
         });
     }
@@ -118,6 +142,9 @@ impl View for SkyView {
             }
             Event::Char('S') => {
                 self.step *= 2.0;
+            }
+            Event::Char(' ') => {
+                self.restart();
             }
             _ => return EventResult::Ignored,
         }
