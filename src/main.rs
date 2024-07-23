@@ -17,31 +17,60 @@ struct SkyView {
     pub sky: Sky,
     fov: FoV,
     q: UnitQuaternion<f32>,
-    total: Rc<RefCell<f32>>,
-    moves: usize,
     step: f32,
     margin: usize,
+    scoring: Rc<RefCell<Scoring>>,
+}
+
+struct Scoring {
+    total: f32,
+    moves: usize,
+}
+
+impl Scoring {
+    fn add_move(&mut self) {
+        self.moves += 1;
+    }
+
+    fn score_and_reset(&mut self, add: f32) {
+        self.total += add * (self.moves as f32 + 20.0);
+        self.moves = 0;
+    }
+
+    fn get_score(&self) -> f32 {
+        self.total
+    }
+
+    fn default() -> Scoring {
+        Scoring {
+            total: 0f32,
+            moves: 0,
+        }
+    }
 }
 
 impl SkyView {
-    fn new(nstars: usize, total: Rc<RefCell<f32>>) -> Self {
+    fn new(nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
         let (q, sky) = make_random(nstars);
         let fov = FoV::new(2.0, 2.0);
-        Self {
-            sky,
-            fov,
-            q,
-            step: 0.1,
-            margin: 1,
-            total,
-            moves: 0,
-        }
+        let scoring = Rc::new(RefCell::new(Scoring::default()));
+        (
+            Self {
+                sky,
+                fov,
+                q,
+                step: 0.1,
+                margin: 1,
+                scoring: Rc::clone(&scoring),
+            },
+            scoring,
+        )
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
         self.q =
             UnitQuaternion::from_euler_angles(x * self.step, y * self.step, z * self.step) * self.q;
-        self.moves += 1;
+        (*self.scoring).borrow_mut().add_move();
     }
 
     fn draw_portion(&self, quat: UnitQuaternion<f32>, p: &Printer, x_max: u8, y_max: u8) {
@@ -69,11 +98,13 @@ impl SkyView {
 
     fn restart(&mut self) {
         // self.total += self.distance() * (self.moves + 20) as f32;
-        *(*self.total).borrow_mut() += self.distance() * (self.moves + 20) as f32;
+        // *(*self.total).borrow_mut() += self.distance() * (self.moves + 20) as f32;
+        (*self.scoring)
+            .borrow_mut()
+            .score_and_reset(self.distance());
         let (q, sky) = make_random(self.sky.len());
         self.q = q;
         self.sky = sky;
-        self.moves = 0;
     }
 }
 
@@ -110,8 +141,8 @@ impl View for SkyView {
                     "distance: {:.6}. Step: {:.4}.  m: {}. TOTAL: {:.6}",
                     self.distance(),
                     self.step,
-                    self.moves,
-                    (*self.total).borrow(),
+                    (*self.scoring).borrow().moves,
+                    (*self.scoring).borrow().get_score(),
                 )
                 .as_str(),
             )
@@ -157,14 +188,13 @@ impl View for SkyView {
 }
 
 fn main() {
-    let total = Rc::new(RefCell::new(0f32));
-    let sky_view: SkyView = SkyView::new(12, Rc::clone(&total));
+    let (sky_view, total) = SkyView::new(12);
     let mut siv = cursive::default();
     siv.add_layer(sky_view);
     siv.add_global_callback('q', |s| s.quit());
     siv.run();
     println!(
         "\n\n\n ====>>>> total: {:?} <<<====\n\n\n",
-        (*total).borrow()
+        (*total).borrow().get_score()
     );
 }
