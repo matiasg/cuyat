@@ -57,6 +57,12 @@ impl FoV {
             half_fov_y,
         }
     }
+    pub fn rescale(&self, scale: f32) -> Self {
+        Self {
+            half_fov_x: self.half_fov_x * scale,
+            half_fov_y: self.half_fov_y * scale,
+        }
+    }
     pub fn project(&self, star: Star) -> Fpp {
         Fpp::new(
             star[0] / star[2] / self.half_fov_x,

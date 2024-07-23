@@ -105,6 +105,10 @@ impl SkyView {
         self.q = q;
         self.sky = sky;
     }
+    fn zoom(&mut self, direction: f32) {
+        let fov = self.fov.rescale(direction);
+        self.fov = fov;
+    }
 }
 
 fn make_random(nstars: usize) -> (nalgebra::Unit<nalgebra::Quaternion<f32>>, Sky) {
@@ -177,8 +181,18 @@ impl View for SkyView {
             Event::Char('S') => {
                 self.step *= 2.0;
             }
+            Event::Char('Z') => {
+                self.zoom(1.25);
+            }
+            Event::Char('z') => {
+                self.zoom(0.8);
+            }
             Event::Char(' ') => {
                 self.restart();
+            }
+            Event::Char('q') => {
+                self.restart();
+                return EventResult::Ignored;
             }
             _ => return EventResult::Ignored,
         }
