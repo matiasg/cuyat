@@ -256,12 +256,13 @@ impl View for SkyView {
             String::from("")
         };
         let status_bar = format!(
-            "{}Step: {:.4},  moves: {}, score: {:.6}, games: {}",
+            "{}Step: {:.4}, zoom: {:.3}. Moves: {}, games: {}, score: {:.6}",
             distance,
             self.step,
+            self.fov.half_fov_x,
             (*self.scoring).borrow().moves,
-            (*self.scoring).borrow().get_score(),
             (*self.scoring).borrow().games,
+            (*self.scoring).borrow().get_score(),
         );
 
         p.with_color(style, |printer| printer.print((1, 0), status_bar.as_str()));
