@@ -83,6 +83,10 @@ impl FoV {
         sky.stars.iter().map(|&s| self.project(s)).collect()
     }
 
+    fn inside(x: u8, minval: u8, maxval: u8) -> bool {
+        minval <= x && x <= maxval
+    }
+
     pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
         if star[2] <= 0.0 {
             return None;
@@ -91,7 +95,7 @@ impl FoV {
         let x = ((fpp[0] + 1.0) / 2.0 * (maxx as f32)).floor() as u8;
         let y = ((fpp[1] + 1.0) / 2.0 * (maxy as f32)).floor() as u8;
 
-        if inside(x, 0, maxx) && inside(y, 0, maxy) {
+        if Self::inside(x, 0, maxx) && Self::inside(y, 0, maxy) {
             Some((x, y))
         } else {
             None
@@ -111,10 +115,6 @@ impl FoV {
             half_fov_y: y_rad.tan() / 2.0,
         }
     }
-}
-
-fn inside(x: u8, minval: u8, maxval: u8) -> bool {
-    minval <= x && x <= maxval
 }
 
 pub struct Scoring {
@@ -145,13 +145,6 @@ impl Scoring {
             games: 0,
         }
     }
-}
-
-fn make_random(nstars: usize) -> (nalgebra::Unit<nalgebra::Quaternion<f32>>, Sky) {
-    let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
-    let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
-    let sky = Sky::random_with_stars(nstars);
-    (q, sky)
 }
 
 #[derive(Clone)]
@@ -309,6 +302,13 @@ impl View for SkyView {
         }
         EventResult::Consumed(None)
     }
+}
+
+fn make_random(nstars: usize) -> (nalgebra::Unit<nalgebra::Quaternion<f32>>, Sky) {
+    let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
+    let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
+    let sky = Sky::random_with_stars(nstars);
+    (q, sky)
 }
 
 #[cfg(test)]
