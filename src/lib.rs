@@ -118,9 +118,9 @@ fn inside(x: u8, minval: u8, maxval: u8) -> bool {
 }
 
 pub struct Scoring {
-    total: f32,
-    moves: usize,
-    games: usize,
+    pub total: f32,
+    pub moves: usize,
+    pub games: usize,
 }
 
 impl Scoring {
