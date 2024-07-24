@@ -148,6 +148,11 @@ impl Scoring {
 }
 
 #[derive(Clone)]
+struct Options {
+    show_distance: bool,
+}
+
+#[derive(Clone)]
 pub struct SkyView {
     pub sky: Sky,
     fov: FoV,
@@ -155,6 +160,7 @@ pub struct SkyView {
     step: f32,
     margin: usize,
     scoring: Rc<RefCell<Scoring>>,
+    options: Options,
 }
 
 impl SkyView {
@@ -162,6 +168,9 @@ impl SkyView {
         let (q, sky) = make_random(nstars);
         let fov = FoV::new(2.0, 2.0);
         let scoring = Rc::new(RefCell::new(Scoring::default()));
+        let options = Options {
+            show_distance: false,
+        };
         (
             Self {
                 sky,
@@ -170,6 +179,7 @@ impl SkyView {
                 step: 0.1,
                 margin: 1,
                 scoring: Rc::clone(&scoring),
+                options,
             },
             scoring,
         )
@@ -240,20 +250,21 @@ impl View for SkyView {
         let right_printer = p.offset(right);
         self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
 
-        p.with_color(style, |printer| {
-            printer.print(
-                (1, 0),
-                format!(
-                    "distance: {:.6}. Step: {:.4},  moves: {}, score: {:.6}, games: {}",
-                    self.distance(),
-                    self.step,
-                    (*self.scoring).borrow().moves,
-                    (*self.scoring).borrow().get_score(),
-                    (*self.scoring).borrow().games,
-                )
-                .as_str(),
-            )
-        });
+        let distance = if self.options.show_distance {
+            format!("distance: {:.6}, ", self.distance())
+        } else {
+            String::from("")
+        };
+        let status_bar = format!(
+            "{}Step: {:.4},  moves: {}, score: {:.6}, games: {}",
+            distance,
+            self.step,
+            (*self.scoring).borrow().moves,
+            (*self.scoring).borrow().get_score(),
+            (*self.scoring).borrow().games,
+        );
+
+        p.with_color(style, |printer| printer.print((1, 0), status_bar.as_str()));
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         Vec2::new(121, 32)
@@ -293,6 +304,9 @@ impl View for SkyView {
             }
             Event::Char(' ') => {
                 self.restart();
+            }
+            Event::Char('d') => {
+                self.options.show_distance = !self.options.show_distance;
             }
             Event::Char('q') => {
                 self.restart();
