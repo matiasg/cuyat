@@ -94,24 +94,24 @@ impl FoV {
             half_fov_y: self.half_fov_y * scale,
         }
     }
+    fn can_be_seen(&self, b: Brightness) -> bool {
+        b.brightness / self.half_fov_x > 0.125
+    }
     pub fn project(&self, star: Star) -> Fpp {
         Fpp::new(
             star[0] / star[2] / self.half_fov_x,
             star[1] / star[2] / self.half_fov_y,
         )
     }
-
     pub fn project_sky(&self, sky: Sky) -> FPStars {
         sky.stars
             .iter()
             .map(|&(s, b)| (self.project(s), b))
             .collect()
     }
-
     fn inside(x: u8, minval: u8, maxval: u8) -> bool {
         minval <= x && x <= maxval
     }
-
     pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
         if star[2] <= 0.0 {
             return None;
@@ -126,13 +126,12 @@ impl FoV {
             None
         }
     }
-
     pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<Option<(u8, u8, u8)>> {
         sky.stars
             .iter()
             .map(|&(s, b)| {
                 let sp = self.to_screen(s, maxx, maxy);
-                if sp.is_none() {
+                if sp.is_none() || !self.can_be_seen(b) {
                     None
                 } else {
                     let sp = sp.unwrap();
