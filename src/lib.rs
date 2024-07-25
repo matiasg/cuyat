@@ -7,21 +7,22 @@ use cursive::{
     theme::{Color, ColorStyle},
     Printer, Vec2, View,
 };
-use nalgebra::{Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
+use nalgebra::{DVector, Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
 
 type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
 type Position = SVector<f32, 3>;
 type Fpp = SVector<f32, 2>; // Focal Plane Point
-pub type FPStars = Vec<Fpp>;
+pub type FPStars = Vec<(Fpp, f32)>;
 
 #[derive(Clone)]
 pub struct Sky {
-    stars: Vec<Star>,
+    /// (Star, brightness)
+    stars: Vec<(Star, f32)>,
 }
 
 impl Sky {
-    pub fn from(stars: Vec<Star>) -> Self {
+    pub fn from(stars: Vec<(Star, f32)>) -> Self {
         Self { stars }
     }
 
@@ -36,18 +37,24 @@ impl Sky {
 
     pub fn seen_from(&self, pos: Position) -> Self {
         Self {
-            stars: self.stars.iter().map(|&s| s - pos).collect(),
+            stars: self.stars.iter().map(|&(s, b)| (s - pos, b)).collect(),
         }
     }
 
     pub fn with_attitude(&self, q: UnitQuaternion<f32>) -> Self {
         Self {
-            stars: self.stars.iter().map(|&s| q * s).collect(),
+            stars: self.stars.iter().map(|&(s, b)| (q * s, b)).collect(),
         }
     }
 
     pub fn random_with_stars(n: usize) -> Self {
-        let stars: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
+        let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
+        let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
+        let stars: Vec<(Star, f32)> = stars_positions
+            .iter()
+            .copied()
+            .zip(brightnesses.iter().copied())
+            .collect();
         let sky = Self { stars };
         sky.seen_from(Star::new(5.0, 5.0, 5.0))
     }
@@ -80,7 +87,10 @@ impl FoV {
     }
 
     pub fn project_sky(&self, sky: Sky) -> FPStars {
-        sky.stars.iter().map(|&s| self.project(s)).collect()
+        sky.stars
+            .iter()
+            .map(|&(s, b)| (self.project(s), b))
+            .collect()
     }
 
     fn inside(x: u8, minval: u8, maxval: u8) -> bool {
@@ -102,10 +112,19 @@ impl FoV {
         }
     }
 
-    pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<Option<(u8, u8)>> {
+    pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<Option<(u8, u8, u8)>> {
         sky.stars
             .iter()
-            .map(|&s| self.to_screen(s, maxx, maxy))
+            .map(|&(s, b)| {
+                let sp = self.to_screen(s, maxx, maxy);
+                if sp.is_none() {
+                    None
+                } else {
+                    let sp = sp.unwrap();
+                    let bu = (b * 255.0).floor() as u8;
+                    Some((sp.0, sp.1, bu))
+                }
+            })
             .collect()
     }
 
@@ -334,8 +353,11 @@ mod test {
 
     use crate::{FoV, Fpp, Position, Sky, Star};
 
-    fn stars() -> Vec<Star> {
-        vec![Star::new(0.0, 1.0, 2.0), Star::new(3.0, 4.0, 5.0)]
+    fn stars() -> Vec<(Star, f32)> {
+        vec![
+            (Star::new(0.0, 1.0, 2.0), 0.5),
+            (Star::new(3.0, 4.0, 5.0), 0.25),
+        ]
     }
     #[test]
     fn test_sky() {
@@ -346,13 +368,16 @@ mod test {
         assert_eq!(from_pos.len(), 2);
         assert_eq!(
             from_pos.stars,
-            vec![Star::new(1.0, 3.0, 5.0), Star::new(4.0, 6.0, 8.0)]
+            vec![
+                (Star::new(1.0, 3.0, 5.0), 0.5),
+                (Star::new(4.0, 6.0, 8.0), 0.25)
+            ]
         );
         let q = UnitQuaternion::from_euler_angles(0.0, 0.0, PI / 2.0);
         let rotated = from_pos.with_attitude(q);
         assert_eq!(rotated.len(), 2);
-        assert!((rotated.stars[0] - Star::new(-3.0, 1.0, 5.0)).norm() < 1e-5);
-        assert!((rotated.stars[1] - Star::new(-6.0, 4.0, 8.0)).norm() < 1e-5);
+        assert!((rotated.stars[0].0 - Star::new(-3.0, 1.0, 5.0)).norm() < 1e-5);
+        assert!((rotated.stars[1].0 - Star::new(-6.0, 4.0, 8.0)).norm() < 1e-5);
     }
 
     #[test]
@@ -360,7 +385,7 @@ mod test {
         let fov = FoV::new(1.0, 2.5);
         let proj_stars = fov.project_sky(Sky::from(stars()));
         println!("ps: {:?}", proj_stars);
-        assert!((proj_stars[0] - Fpp::new(0.0, 0.2)).norm() < 1e-5);
-        assert!((proj_stars[1] - Fpp::new(0.6, 0.32)).norm() < 1e-5);
+        assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
+        assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
     }
 }
