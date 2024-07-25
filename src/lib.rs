@@ -195,7 +195,7 @@ impl SkyView {
                 sky,
                 fov,
                 q,
-                step: 0.1,
+                step: 0.125,
                 margin: 1,
                 scoring: Rc::clone(&scoring),
                 options,
@@ -243,6 +243,7 @@ impl SkyView {
         let (q, sky) = make_random(self.sky.len());
         self.q = q;
         self.sky = sky;
+        self.step = 0.125;
     }
     fn zoom(&mut self, direction: f32) {
         let fov = self.fov.rescale(direction);
