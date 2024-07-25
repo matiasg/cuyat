@@ -13,16 +13,31 @@ type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
 type Position = SVector<f32, 3>;
 type Fpp = SVector<f32, 2>; // Focal Plane Point
-pub type FPStars = Vec<(Fpp, f32)>;
+pub type FPStars = Vec<(Fpp, Brightness)>;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Brightness {
+    brightness: f32, // expected to be between 0 and 1
+}
+impl Brightness {
+    const MAX_MAG: f32 = -1.4f32;
+
+    fn for_magnitude(m: f32) -> Self {
+        let brightness: f32 = 0.01f32.powf((m - Self::MAX_MAG) / 5.0);
+        Self { brightness }
+    }
+    fn new(b: f32) -> Self {
+        Self { brightness: b }
+    }
+}
 
 #[derive(Clone)]
 pub struct Sky {
-    /// (Star, brightness)
-    stars: Vec<(Star, f32)>,
+    stars: Vec<(Star, Brightness)>,
 }
 
 impl Sky {
-    pub fn from(stars: Vec<(Star, f32)>) -> Self {
+    pub fn from(stars: Vec<(Star, Brightness)>) -> Self {
         Self { stars }
     }
 
@@ -50,10 +65,10 @@ impl Sky {
     pub fn random_with_stars(n: usize) -> Self {
         let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
         let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
-        let stars: Vec<(Star, f32)> = stars_positions
+        let stars: Vec<(Star, Brightness)> = stars_positions
             .iter()
             .copied()
-            .zip(brightnesses.iter().copied())
+            .zip(brightnesses.iter().map(|&b| Brightness::new(b)))
             .collect();
         let sky = Self { stars };
         sky.seen_from(Star::new(5.0, 5.0, 5.0))
@@ -121,7 +136,7 @@ impl FoV {
                     None
                 } else {
                     let sp = sp.unwrap();
-                    let bu = 128 + (b * 128.0).floor() as u8;
+                    let bu = 128 + (b.brightness * 128.0).floor() as u8;
                     Some((sp.0, sp.1, bu))
                 }
             })
@@ -352,12 +367,12 @@ mod test {
 
     use nalgebra::UnitQuaternion;
 
-    use crate::{FoV, Fpp, Position, Sky, Star};
+    use crate::{Brightness, FoV, Fpp, Position, Sky, Star};
 
-    fn stars() -> Vec<(Star, f32)> {
+    fn stars() -> Vec<(Star, Brightness)> {
         vec![
-            (Star::new(0.0, 1.0, 2.0), 0.5),
-            (Star::new(3.0, 4.0, 5.0), 0.25),
+            (Star::new(0.0, 1.0, 2.0), Brightness::new(0.5)),
+            (Star::new(3.0, 4.0, 5.0), Brightness::new(0.25)),
         ]
     }
     #[test]
@@ -370,8 +385,8 @@ mod test {
         assert_eq!(
             from_pos.stars,
             vec![
-                (Star::new(1.0, 3.0, 5.0), 0.5),
-                (Star::new(4.0, 6.0, 8.0), 0.25)
+                (Star::new(1.0, 3.0, 5.0), Brightness::new(0.5)),
+                (Star::new(4.0, 6.0, 8.0), Brightness::new(0.25))
             ]
         );
         let q = UnitQuaternion::from_euler_angles(0.0, 0.0, PI / 2.0);
