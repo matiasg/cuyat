@@ -121,7 +121,7 @@ impl FoV {
                     None
                 } else {
                     let sp = sp.unwrap();
-                    let bu = (b * 255.0).floor() as u8;
+                    let bu = 128 + (b * 128.0).floor() as u8;
                     Some((sp.0, sp.1, bu))
                 }
             })
@@ -211,8 +211,6 @@ impl SkyView {
     }
 
     fn draw_portion(&self, quat: UnitQuaternion<f32>, p: &Printer, x_max: u8, y_max: u8) {
-        let style = ColorStyle::new(Color::Rgb(255, 255, 255), Color::Rgb(0, 0, 64));
-
         for (i, fps) in self
             .fov
             .project_sky_to_screen(self.sky.with_attitude(quat), x_max, y_max)
@@ -220,6 +218,8 @@ impl SkyView {
             .enumerate()
             .filter(|(_, p)| p.is_some())
         {
+            let b = fps.unwrap().2;
+            let style = ColorStyle::new(Color::Rgb(b, b, b), Color::Rgb(0, 0, 32));
             p.with_color(style, |printer| {
                 printer.print(
                     (fps.unwrap().0, fps.unwrap().1),
