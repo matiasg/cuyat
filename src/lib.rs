@@ -13,7 +13,7 @@ type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
 type Position = SVector<f32, 3>;
 type Fpp = SVector<f32, 2>; // Focal Plane Point
-pub type FPStars = Vec<(Fpp, Brightness)>;
+pub type FPStars = Vec<(Fpp, Brightness, String)>;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Brightness {
@@ -33,11 +33,12 @@ impl Brightness {
 
 #[derive(Clone)]
 pub struct Sky {
-    stars: Vec<(Star, Brightness)>,
+    /// position, brightness, name
+    stars: Vec<(Star, Brightness, String)>,
 }
 
 impl Sky {
-    pub fn from(stars: Vec<(Star, Brightness)>) -> Self {
+    pub fn from(stars: Vec<(Star, Brightness, String)>) -> Self {
         Self { stars }
     }
 
@@ -52,23 +53,37 @@ impl Sky {
 
     pub fn seen_from(&self, pos: Position) -> Self {
         Self {
-            stars: self.stars.iter().map(|&(s, b)| (s - pos, b)).collect(),
+            stars: self
+                .stars
+                .iter()
+                .map(|(s, b, n)| (*s - pos, *b, n.clone()))
+                .collect(),
         }
     }
 
     pub fn with_attitude(&self, q: UnitQuaternion<f32>) -> Self {
         Self {
-            stars: self.stars.iter().map(|&(s, b)| (q * s, b)).collect(),
+            stars: self
+                .stars
+                .iter()
+                .map(|(s, b, n)| (q * *s, *b, n.clone()))
+                .collect(),
         }
     }
 
     pub fn random_with_stars(n: usize) -> Self {
         let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
         let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
-        let stars: Vec<(Star, Brightness)> = stars_positions
+        let names: Vec<String> = (0..n)
+            // .map(|i| std::str::from_utf8(&[i as u8 + 97]).unwrap())
+            .map(|i| format!("{i}"))
+            .collect();
+        let stars: Vec<(Star, Brightness, String)> = stars_positions
             .iter()
             .copied()
             .zip(brightnesses.iter().map(|&b| Brightness::new(b)))
+            .zip(names.iter())
+            .map(|((s, b), n)| (s, b, String::from(n)))
             .collect();
         let sky = Self { stars };
         sky.seen_from(Star::new(5.0, 5.0, 5.0))
@@ -94,25 +109,25 @@ impl FoV {
             half_fov_y: self.half_fov_y * scale,
         }
     }
-    fn can_be_seen(&self, b: Brightness) -> bool {
+    fn can_be_seen(&self, b: &Brightness) -> bool {
         b.brightness / self.half_fov_x > 0.125
     }
-    pub fn project(&self, star: Star) -> Fpp {
+    pub fn project(&self, star: &Star) -> Fpp {
         Fpp::new(
             star[0] / star[2] / self.half_fov_x,
             star[1] / star[2] / self.half_fov_y,
         )
     }
-    pub fn project_sky(&self, sky: Sky) -> FPStars {
+    pub fn project_sky(&self, sky: &Sky) -> FPStars {
         sky.stars
             .iter()
-            .map(|&(s, b)| (self.project(s), b))
+            .map(|(s, b, n)| (self.project(&s), *b, n.clone()))
             .collect()
     }
     fn inside(x: u8, minval: u8, maxval: u8) -> bool {
         minval <= x && x <= maxval
     }
-    pub fn to_screen(&self, star: Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
+    pub fn to_screen(&self, star: &Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
         if star[2] <= 0.0 {
             return None;
         }
@@ -126,17 +141,22 @@ impl FoV {
             None
         }
     }
-    pub fn project_sky_to_screen(&self, sky: Sky, maxx: u8, maxy: u8) -> Vec<Option<(u8, u8, u8)>> {
+    pub fn project_sky_to_screen(
+        &self,
+        sky: Sky,
+        maxx: u8,
+        maxy: u8,
+    ) -> Vec<Option<(u8, u8, u8, String)>> {
         sky.stars
             .iter()
-            .map(|&(s, b)| {
+            .map(|(s, b, n)| {
                 let sp = self.to_screen(s, maxx, maxy);
                 if sp.is_none() || !self.can_be_seen(b) {
                     None
                 } else {
                     let sp = sp.unwrap();
                     let bu = 128 + (b.brightness * 128.0).floor() as u8;
-                    Some((sp.0, sp.1, bu))
+                    Some((sp.0, sp.1, bu, String::from(n)))
                 }
             })
             .collect()
@@ -225,20 +245,17 @@ impl SkyView {
     }
 
     fn draw_portion(&self, quat: UnitQuaternion<f32>, p: &Printer, x_max: u8, y_max: u8) {
-        for (i, fps) in self
+        for fps in self
             .fov
             .project_sky_to_screen(self.sky.with_attitude(quat), x_max, y_max)
             .iter()
-            .enumerate()
-            .filter(|(_, p)| p.is_some())
+            .filter(|p| p.is_some())
         {
-            let b = fps.unwrap().2;
-            let style = ColorStyle::new(Color::Rgb(b, b, b), Color::Rgb(0, 0, 32));
+            let (px, py, b, n) = fps.as_ref().unwrap();
+            // let b = fps.as_ref().unwrap().2;
+            let style = ColorStyle::new(Color::Rgb(*b, *b, *b), Color::Rgb(0, 0, 32));
             p.with_color(style, |printer| {
-                printer.print(
-                    (fps.unwrap().0, fps.unwrap().1),
-                    std::str::from_utf8(&[i as u8 + 97]).unwrap(),
-                );
+                printer.print((*px, *py), n);
             });
         }
     }
@@ -368,10 +385,18 @@ mod test {
 
     use crate::{Brightness, FoV, Fpp, Position, Sky, Star};
 
-    fn stars() -> Vec<(Star, Brightness)> {
+    fn stars() -> Vec<(Star, Brightness, String)> {
         vec![
-            (Star::new(0.0, 1.0, 2.0), Brightness::new(0.5)),
-            (Star::new(3.0, 4.0, 5.0), Brightness::new(0.25)),
+            (
+                Star::new(0.0, 1.0, 2.0),
+                Brightness::new(0.5),
+                String::from("a"),
+            ),
+            (
+                Star::new(3.0, 4.0, 5.0),
+                Brightness::new(0.25),
+                String::from("b"),
+            ),
         ]
     }
     #[test]
@@ -384,8 +409,16 @@ mod test {
         assert_eq!(
             from_pos.stars,
             vec![
-                (Star::new(1.0, 3.0, 5.0), Brightness::new(0.5)),
-                (Star::new(4.0, 6.0, 8.0), Brightness::new(0.25))
+                (
+                    Star::new(1.0, 3.0, 5.0),
+                    Brightness::new(0.5),
+                    String::from("a")
+                ),
+                (
+                    Star::new(4.0, 6.0, 8.0),
+                    Brightness::new(0.25),
+                    String::from("b")
+                )
             ]
         );
         let q = UnitQuaternion::from_euler_angles(0.0, 0.0, PI / 2.0);
@@ -398,7 +431,7 @@ mod test {
     #[test]
     fn test_fov() {
         let fov = FoV::new(1.0, 2.5);
-        let proj_stars = fov.project_sky(Sky::from(stars()));
+        let proj_stars = fov.project_sky(&Sky::from(stars()));
         println!("ps: {:?}", proj_stars);
         assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
         assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
