@@ -15,12 +15,15 @@ type Position = SVector<f32, 3>;
 type Fpp = SVector<f32, 2>; // Focal Plane Point
 pub type FPStars = Vec<(Fpp, Brightness, String)>;
 
+/// Star (position), Brightness, Name
+type StBrNm = (Star, Brightness, String);
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Brightness {
     brightness: f32, // expected to be between 0 and 1
 }
 impl Brightness {
-    const MAX_MAG: f32 = -1.4f32;
+    const MAX_MAG: f32 = -1.46f32;
 
     fn for_magnitude(m: f32) -> Self {
         let brightness: f32 = 0.01f32.powf((m - Self::MAX_MAG) / 5.0);
@@ -33,12 +36,11 @@ impl Brightness {
 
 #[derive(Clone)]
 pub struct Sky {
-    /// position, brightness, name
-    stars: Vec<(Star, Brightness, String)>,
+    stars: Vec<StBrNm>,
 }
 
 impl Sky {
-    pub fn from(stars: Vec<(Star, Brightness, String)>) -> Self {
+    pub fn from(stars: Vec<StBrNm>) -> Self {
         Self { stars }
     }
 
@@ -78,7 +80,7 @@ impl Sky {
             // .map(|i| std::str::from_utf8(&[i as u8 + 97]).unwrap())
             .map(|i| format!("{i}"))
             .collect();
-        let stars: Vec<(Star, Brightness, String)> = stars_positions
+        let stars: Vec<StBrNm> = stars_positions
             .iter()
             .copied()
             .zip(brightnesses.iter().map(|&b| Brightness::new(b)))
@@ -121,7 +123,7 @@ impl FoV {
     pub fn project_sky(&self, sky: &Sky) -> FPStars {
         sky.stars
             .iter()
-            .map(|(s, b, n)| (self.project(&s), *b, n.clone()))
+            .map(|(s, b, n)| (self.project(s), *b, n.clone()))
             .collect()
     }
     fn inside(x: u8, minval: u8, maxval: u8) -> bool {
@@ -385,7 +387,7 @@ mod test {
 
     use crate::{Brightness, FoV, Fpp, Position, Sky, Star};
 
-    fn stars() -> Vec<(Star, Brightness, String)> {
+    fn stars() -> Vec<SBN> {
         vec![
             (
                 Star::new(0.0, 1.0, 2.0),
