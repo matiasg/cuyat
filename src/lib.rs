@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use std::f32::consts::PI;
 use std::rc::Rc;
+use std::{cell::RefCell, fs};
 
 use cursive::{
     event::{Event, EventResult},
@@ -8,6 +8,7 @@ use cursive::{
     Printer, Vec2, View,
 };
 use nalgebra::{DVector, Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
+use regex::Regex;
 
 type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
@@ -42,6 +43,47 @@ pub struct Sky {
 impl Sky {
     pub fn from(stars: Vec<StBrNm>) -> Self {
         Self { stars }
+    }
+
+    pub fn from_line(line: &str) -> StBrNm {
+        let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d)(\\d\\d)(\\d\\d\\.\\d)([+-])(\\d\\d)(\\d\\d)(\\d\\d).{12}([+ -])(\\d\\.\\d\\d)").unwrap();
+        let sbn = sbn_re.captures(line).unwrap();
+
+        let name = String::from(sbn.get(1).unwrap().as_str());
+
+        let rahh: u8 = sbn.get(2).unwrap().as_str().parse().unwrap();
+        let ramm: u8 = sbn.get(3).unwrap().as_str().parse().unwrap();
+        let rass: f32 = sbn.get(4).unwrap().as_str().parse().unwrap();
+        let ra: f32 = ((rahh as f32) * 15.0 + (ramm as f32) / 4.0 + rass / 240.0).to_radians();
+
+        let sgn: f32 = match sbn.get(5).unwrap().as_str() {
+            "+" => 1.0,
+            _ => -1.0,
+        };
+        let dedeg: u8 = sbn.get(6).unwrap().as_str().parse().unwrap();
+        let demin: u8 = sbn.get(7).unwrap().as_str().parse().unwrap();
+        let desec: u8 = sbn.get(8).unwrap().as_str().parse().unwrap();
+        let dec: f32 =
+            sgn * ((dedeg as f32) + (demin as f32) / 60.0 + (desec as f32) / 3600.0).to_radians();
+
+        println!("{rahh}:{ramm}:{rass}->{ra}, {dedeg}:{demin}:{desec}->{dec}");
+
+        let star_pos = Star::new(ra.cos() * dec.cos(), ra.sin() * dec.cos(), dec.sin());
+
+        let sgn: f32 = match sbn.get(9).unwrap().as_str() {
+            "-" => -1.0,
+            _ => 1.0,
+        };
+        let mag: f32 = sbn.get(10).unwrap().as_str().parse().unwrap();
+        let brightness = Brightness::for_magnitude(sgn * mag);
+        (star_pos, brightness, name)
+    }
+
+    pub fn from_file(fname: &str) -> Self {
+        let input: String = fs::read_to_string(fname).unwrap();
+        let input: Vec<&str> = input.trim().split('\n').collect();
+        let stars: Vec<StBrNm> = input.iter().map(|&line| Self::from_line(line)).collect();
+        Self::from(stars)
     }
 
     pub fn len(&self) -> usize {
@@ -220,12 +262,17 @@ pub struct SkyView {
 
 impl SkyView {
     pub fn new(nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
-        let (q, sky) = make_random(nstars);
+        let sky = random_sky(nstars);
+        Self::new_from(sky)
+    }
+
+    pub fn new_from(sky: Sky) -> (Self, Rc<RefCell<Scoring>>) {
         let fov = FoV::new(2.0, 2.0);
         let scoring = Rc::new(RefCell::new(Scoring::default()));
         let options = Options {
             show_distance: false,
         };
+        let q = random_quaternion();
         (
             Self {
                 sky,
@@ -273,8 +320,8 @@ impl SkyView {
         (*self.scoring)
             .borrow_mut()
             .score_and_reset(self.distance());
-        let (q, sky) = make_random(self.sky.len());
-        self.q = q;
+        let sky = random_sky(self.sky.len());
+        self.q = random_quaternion();
         self.sky = sky;
         self.step = 0.125;
     }
@@ -372,22 +419,25 @@ impl View for SkyView {
     }
 }
 
-fn make_random(nstars: usize) -> (nalgebra::Unit<nalgebra::Quaternion<f32>>, Sky) {
+fn random_quaternion() -> nalgebra::Unit<nalgebra::Quaternion<f32>> {
     let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
-    let q = UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2]);
-    let sky = Sky::random_with_stars(nstars);
-    (q, sky)
+    UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2])
+}
+
+fn random_sky(nstars: usize) -> Sky {
+    Sky::random_with_stars(nstars)
 }
 
 #[cfg(test)]
 mod test {
+    use approx::assert_relative_eq;
     use std::f32::consts::PI;
 
     use nalgebra::UnitQuaternion;
 
-    use crate::{Brightness, FoV, Fpp, Position, Sky, Star};
+    use crate::{Brightness, FoV, Fpp, Position, Sky, StBrNm, Star};
 
-    fn stars() -> Vec<SBN> {
+    fn stars() -> Vec<StBrNm> {
         vec![
             (
                 Star::new(0.0, 1.0, 2.0),
@@ -437,5 +487,22 @@ mod test {
         println!("ps: {:?}", proj_stars);
         assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
         assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
+    }
+
+    #[test]
+    fn test_from_line() {
+        let bet_line = "2061 58Alp OriBD+07 1055  39801113271 224I   4506  Alp Ori  054945.4+072319055510.3+072425199.79-08.96 0.50  +1.85 +2.06 +1.28   M1-2Ia-Iab        e+0.026+0.009 +.005+021SB         9.9 174.4AE   6*";
+        let sir_line = "2491  9Alp CMaBD-16 1591  48915151881 257I   5423           064044.6-163444064508.9-164258227.22-08.88-1.46   0.00 -0.05 -0.03   A1Vm               -0.553-1.205 +.375-008SBO    13 10.3  11.2AB   4*";
+        let betelgeuse = Sky::from_line(bet_line);
+        let exp_bet = Star::new(0.0208902, 0.9914355, 0.1289158);
+        (0..3)
+            .for_each(|i| assert_relative_eq!(betelgeuse.0[i], exp_bet[i], epsilon = f32::EPSILON));
+        assert_eq!(betelgeuse.1, Brightness::for_magnitude(0.5));
+        assert_eq!(betelgeuse.2, "Alp Ori");
+        let sirius = Sky::from_line(sir_line);
+        let exp_sir = Star::new(-0.18745413, 0.93921775, -0.2876299);
+        (0..3).for_each(|i| assert_relative_eq!(sirius.0[i], exp_sir[i], epsilon = f32::EPSILON));
+        assert_eq!(sirius.1, Brightness::for_magnitude(-1.46));
+        assert_eq!(sirius.2, "Alp CMa");
     }
 }
