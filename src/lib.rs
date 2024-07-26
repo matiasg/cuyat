@@ -45,8 +45,7 @@ impl Sky {
         Self { stars }
     }
 
-    pub fn from_line(line: &str) -> StBrNm {
-        let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d)(\\d\\d)(\\d\\d\\.\\d)([+-])(\\d\\d)(\\d\\d)(\\d\\d).{12}([+ -])(\\d\\.\\d\\d)").unwrap();
+    pub fn from_line(line: &str, sbn_re: &Regex) -> StBrNm {
         let sbn = sbn_re.captures(line).unwrap();
 
         let name = String::from(sbn.get(1).unwrap().as_str());
@@ -66,23 +65,26 @@ impl Sky {
         let dec: f32 =
             sgn * ((dedeg as f32) + (demin as f32) / 60.0 + (desec as f32) / 3600.0).to_radians();
 
-        println!("{rahh}:{ramm}:{rass}->{ra}, {dedeg}:{demin}:{desec}->{dec}");
-
         let star_pos = Star::new(ra.cos() * dec.cos(), ra.sin() * dec.cos(), dec.sin());
 
         let sgn: f32 = match sbn.get(9).unwrap().as_str() {
             "-" => -1.0,
             _ => 1.0,
         };
-        let mag: f32 = sbn.get(10).unwrap().as_str().parse().unwrap();
+        let mag: f32 = sbn.get(10).unwrap().as_str().trim().parse().unwrap();
         let brightness = Brightness::for_magnitude(sgn * mag);
         (star_pos, brightness, name)
     }
 
     pub fn from_file(fname: &str) -> Self {
+        let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d)(\\d\\d)(\\d\\d\\.\\d)([+-])(\\d\\d)(\\d\\d)(\\d\\d).{12}([+ -])([0-9. ]{4})").unwrap();
         let input: String = fs::read_to_string(fname).unwrap();
-        let input: Vec<&str> = input.trim().split('\n').collect();
-        let stars: Vec<StBrNm> = input.iter().map(|&line| Self::from_line(line)).collect();
+        let input: Vec<&str> = input.trim_end().split('\n').collect();
+        let stars: Vec<StBrNm> = input
+            .iter()
+            .map(|&line| Self::from_line(line, &sbn_re))
+            .filter(|sbn| sbn.1.brightness > 0.01)
+            .collect();
         Self::from(stars)
     }
 
@@ -154,7 +156,7 @@ impl FoV {
         }
     }
     fn can_be_seen(&self, b: &Brightness) -> bool {
-        b.brightness / self.half_fov_x > 0.125
+        b.brightness / self.half_fov_x > 0.01f32.powf(0.8)
     }
     pub fn project(&self, star: &Star) -> Fpp {
         Fpp::new(
@@ -247,6 +249,7 @@ impl Scoring {
 #[derive(Clone)]
 struct Options {
     show_distance: bool,
+    renew_sky: bool,
 }
 
 #[derive(Clone)]
@@ -263,14 +266,15 @@ pub struct SkyView {
 impl SkyView {
     pub fn new(nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
         let sky = random_sky(nstars);
-        Self::new_from(sky)
+        Self::new_from(sky, true)
     }
 
-    pub fn new_from(sky: Sky) -> (Self, Rc<RefCell<Scoring>>) {
+    pub fn new_from(sky: Sky, renew_sky: bool) -> (Self, Rc<RefCell<Scoring>>) {
         let fov = FoV::new(2.0, 2.0);
         let scoring = Rc::new(RefCell::new(Scoring::default()));
         let options = Options {
             show_distance: false,
+            renew_sky,
         };
         let q = random_quaternion();
         (
@@ -315,14 +319,13 @@ impl SkyView {
     }
 
     fn restart(&mut self) {
-        // self.total += self.distance() * (self.moves + 20) as f32;
-        // *(*self.total).borrow_mut() += self.distance() * (self.moves + 20) as f32;
         (*self.scoring)
             .borrow_mut()
             .score_and_reset(self.distance());
-        let sky = random_sky(self.sky.len());
+        if self.options.renew_sky {
+            self.sky = random_sky(self.sky.len());
+        }
         self.q = random_quaternion();
-        self.sky = sky;
         self.step = 0.125;
     }
     fn zoom(&mut self, direction: f32) {
@@ -431,6 +434,7 @@ fn random_sky(nstars: usize) -> Sky {
 #[cfg(test)]
 mod test {
     use approx::assert_relative_eq;
+    use regex::Regex;
     use std::f32::consts::PI;
 
     use nalgebra::UnitQuaternion;
@@ -484,22 +488,22 @@ mod test {
     fn test_fov() {
         let fov = FoV::new(1.0, 2.5);
         let proj_stars = fov.project_sky(&Sky::from(stars()));
-        println!("ps: {:?}", proj_stars);
         assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
         assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
     }
 
     #[test]
     fn test_from_line() {
+        let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d)(\\d\\d)(\\d\\d\\.\\d)([+-])(\\d\\d)(\\d\\d)(\\d\\d).{12}([+ -])([0-9. ]{4})").unwrap();
         let bet_line = "2061 58Alp OriBD+07 1055  39801113271 224I   4506  Alp Ori  054945.4+072319055510.3+072425199.79-08.96 0.50  +1.85 +2.06 +1.28   M1-2Ia-Iab        e+0.026+0.009 +.005+021SB         9.9 174.4AE   6*";
         let sir_line = "2491  9Alp CMaBD-16 1591  48915151881 257I   5423           064044.6-163444064508.9-164258227.22-08.88-1.46   0.00 -0.05 -0.03   A1Vm               -0.553-1.205 +.375-008SBO    13 10.3  11.2AB   4*";
-        let betelgeuse = Sky::from_line(bet_line);
+        let betelgeuse = Sky::from_line(bet_line, &sbn_re);
         let exp_bet = Star::new(0.0208902, 0.9914355, 0.1289158);
         (0..3)
             .for_each(|i| assert_relative_eq!(betelgeuse.0[i], exp_bet[i], epsilon = f32::EPSILON));
         assert_eq!(betelgeuse.1, Brightness::for_magnitude(0.5));
         assert_eq!(betelgeuse.2, "Alp Ori");
-        let sirius = Sky::from_line(sir_line);
+        let sirius = Sky::from_line(sir_line, &sbn_re);
         let exp_sir = Star::new(-0.18745413, 0.93921775, -0.2876299);
         (0..3).for_each(|i| assert_relative_eq!(sirius.0[i], exp_sir[i], epsilon = f32::EPSILON));
         assert_eq!(sirius.1, Brightness::for_magnitude(-1.46));
