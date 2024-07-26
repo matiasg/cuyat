@@ -216,6 +216,7 @@ impl FoV {
     }
 }
 
+#[derive(Debug)]
 pub struct Scoring {
     pub total: f32,
     pub moves: usize,
@@ -328,6 +329,7 @@ impl SkyView {
         self.q = random_quaternion();
         self.step = 0.125;
     }
+
     fn zoom(&mut self, direction: f32) {
         let fov = self.fov.rescale(direction);
         self.fov = fov;
