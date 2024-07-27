@@ -1,4 +1,5 @@
-use cuyat::{Sky, SkyView};
+use cuyat::sky::Sky;
+use cuyat::view::SkyView;
 
 fn main() {
     let sky = Sky::from_file("bsc5.dat");
