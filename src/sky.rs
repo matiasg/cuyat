@@ -28,7 +28,7 @@ impl Brightness {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Sky {
     stars: Vec<StBrNm>,
 }
@@ -237,22 +237,21 @@ impl FoV {
             .map(|(s, b, n)| (self.project(s), *b, n.clone()))
             .collect()
     }
-    fn inside(x: u8, minval: u8, maxval: u8) -> bool {
-        minval <= x && x <= maxval
+    fn in_box(x: f32, y: f32, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
+        if x < 0.0 || x >= maxx as f32 || y < 0.0 || y >= maxy as f32 {
+            None
+        } else {
+            Some((x as u8, y as u8))
+        }
     }
     pub fn to_screen(&self, star: &Star, maxx: u8, maxy: u8) -> Option<(u8, u8)> {
         if star[2] <= 0.0 {
             return None;
         }
         let fpp = self.project(star);
-        let x = ((fpp[0] + 1.0) / 2.0 * (maxx as f32)).floor() as u8;
-        let y = ((fpp[1] + 1.0) / 2.0 * (maxy as f32)).floor() as u8;
-
-        if Self::inside(x, 0, maxx) && Self::inside(y, 0, maxy) {
-            Some((x, y))
-        } else {
-            None
-        }
+        let x = ((fpp[0] + 1.0) / 2.0 * (maxx as f32)).round();
+        let y = ((fpp[1] + 1.0) / 2.0 * (maxy as f32)).round();
+        Self::in_box(x, y, maxx, maxy)
     }
     pub fn project_sky_to_screen(
         &self,
@@ -342,6 +341,50 @@ mod test {
         let proj_stars = fov.project_sky(&Sky::from(stars()));
         assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
         assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
+    }
+
+    #[test]
+    fn test_project() {
+        let sky = Sky::from(stars());
+        let fov = FoV::new(1.0, 1.0);
+        let p: Vec<_> = fov
+            .project_sky_to_screen(sky.clone(), 60, 60)
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(p.len(), 2);
+        let (a, b) = (p.get(0).unwrap(), p.get(1).unwrap());
+        assert_eq!((a.0, a.1), (30, 45));
+        assert_eq!((b.0, b.1), (48, 54));
+
+        let p: Vec<_> = FoV::new(0.5, 0.51)
+            .project_sky_to_screen(sky.clone(), 60, 60)
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(p.len(), 1);
+        let a = p.first().unwrap();
+        assert_eq!((a.0, a.1), (30, 59));
+
+        let p: Vec<_> = FoV::new(0.5, 0.5)
+            .project_sky_to_screen(sky.clone(), 60, 60)
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(p.len(), 0);
+
+        let p: Vec<_> = FoV::new(0.5, 0.5)
+            .project_sky_to_screen(
+                sky.with_attitude(UnitQuaternion::from_euler_angles(0.0, 0.0, PI)),
+                60,
+                60,
+            )
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(p.len(), 1);
+        let a = p.first().unwrap();
+        assert_eq!((a.0, a.1), (30, 0));
     }
 
     #[test]
