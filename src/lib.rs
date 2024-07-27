@@ -201,7 +201,7 @@ impl FoV {
                     None
                 } else {
                     let sp = sp.unwrap();
-                    let bu = 128 + (b.brightness * 128.0).floor() as u8;
+                    let bu = 128 + (b.brightness * 127.0).floor() as u8;
                     Some((sp.0, sp.1, bu, String::from(n)))
                 }
             })
@@ -306,7 +306,6 @@ impl SkyView {
             .filter(|p| p.is_some())
         {
             let (px, py, b, n) = fps.as_ref().unwrap();
-            // let b = fps.as_ref().unwrap().2;
             let style = ColorStyle::new(Color::Rgb(*b, *b, *b), Color::Rgb(0, 0, 32));
             p.with_color(style, |printer| {
                 printer.print((*px, *py), n);
