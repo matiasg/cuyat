@@ -197,6 +197,7 @@ pub struct Scoring {
     pub total: f32,
     pub moves: usize,
     pub games: usize,
+    pub counted_moves: usize,
 }
 
 impl Scoring {
@@ -207,6 +208,7 @@ impl Scoring {
     fn score_and_reset(&mut self, add: f32) {
         self.total += add * (self.moves as f32 + 20.0);
         self.games += 1;
+        self.counted_moves += self.moves;
         self.moves = 0;
     }
 
@@ -218,6 +220,7 @@ impl Scoring {
         Scoring {
             total: 0f32,
             moves: 0,
+            counted_moves: 0,
             games: 0,
         }
     }

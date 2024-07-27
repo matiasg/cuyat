@@ -15,6 +15,7 @@ fn main() {
 
 
         ========
+        moves: {}
         total: {:.6}
         games: {}
         --------
@@ -22,6 +23,7 @@ fn main() {
         ========
 
         ",
+        score.counted_moves,
         score.total,
         score.games,
         score.get_score()
