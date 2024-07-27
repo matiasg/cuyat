@@ -324,6 +324,8 @@ impl SkyView {
             .score_and_reset(self.distance());
         if self.options.renew_sky {
             self.sky = random_sky(self.sky.len());
+        } else {
+            self.sky = self.sky.with_attitude(random_quaternion());
         }
         self.q = random_quaternion();
         self.step = 0.125;
