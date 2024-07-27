@@ -184,10 +184,7 @@ impl Sky {
     pub fn random_with_stars(n: usize) -> Self {
         let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
         let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
-        let names: Vec<String> = (0..n)
-            // .map(|i| std::str::from_utf8(&[i as u8 + 97]).unwrap())
-            .map(|i| format!("{i}"))
-            .collect();
+        let names: Vec<String> = (0..n).map(|i| format!("{i}")).collect();
         let stars: Vec<StBrNm> = stars_positions
             .iter()
             .copied()

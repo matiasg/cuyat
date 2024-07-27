@@ -12,6 +12,7 @@ use crate::sky::{random_quaternion, FoV, Sky};
 #[derive(Clone)]
 struct Options {
     show_distance: bool,
+    show_star_names: bool,
     renew_sky: bool,
 }
 
@@ -37,6 +38,7 @@ impl SkyView {
         let scoring = Rc::new(RefCell::new(Scoring::default()));
         let options = Options {
             show_distance: false,
+            show_star_names: true,
             renew_sky,
         };
         let q = random_quaternion();
@@ -69,8 +71,13 @@ impl SkyView {
         {
             let (px, py, b, n) = fps;
             let style = ColorStyle::new(Color::Rgb(b, b, b), Color::Rgb(0, 0, 32));
+            let id = if self.options.show_star_names {
+                n.as_str()
+            } else {
+                "*"
+            };
             p.with_color(style, |printer| {
-                printer.print((px, py), &n);
+                printer.print((px, py), id);
             });
         }
     }
@@ -176,6 +183,9 @@ impl View for SkyView {
             }
             Event::Char('d') => {
                 self.options.show_distance = !self.options.show_distance;
+            }
+            Event::Char('n') => {
+                self.options.show_star_names = !self.options.show_star_names;
             }
             Event::Char('q') => {
                 self.restart();

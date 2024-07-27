@@ -26,6 +26,7 @@ For that, you use your keyboard like this:
 | z/Z | zoom               |
 | s/S | scale              |
 | d   | show/hide distance |
+| n   | show/hide star names |
 | space | score this game and start another |
 | q | end playing the game |
 
