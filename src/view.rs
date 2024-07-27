@@ -64,13 +64,13 @@ impl SkyView {
         for fps in self
             .fov
             .project_sky_to_screen(self.sky.with_attitude(quat), x_max, y_max)
-            .iter()
-            .filter(|p| p.is_some())
+            .into_iter()
+            .flatten()
         {
-            let (px, py, b, n) = fps.as_ref().unwrap();
-            let style = ColorStyle::new(Color::Rgb(*b, *b, *b), Color::Rgb(0, 0, 32));
+            let (px, py, b, n) = fps;
+            let style = ColorStyle::new(Color::Rgb(b, b, b), Color::Rgb(0, 0, 32));
             p.with_color(style, |printer| {
-                printer.print((*px, *py), n);
+                printer.print((px, py), &n);
             });
         }
     }
