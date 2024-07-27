@@ -1,4 +1,4 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
 use nalgebra::{DVector, Dyn, OMatrix, SVector, UnitQuaternion, U3};
 use regex::Regex;
@@ -69,7 +69,7 @@ impl Sky {
         (star_pos, brightness, name)
     }
 
-    pub fn from_file(fname: &str) -> Self {
+    pub fn from_catalog_file(fname: &str) -> Self {
         let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d)(\\d\\d)(\\d\\d\\.\\d)([+-])(\\d\\d)(\\d\\d)(\\d\\d).{12}([+ -])([0-9. ]{4})").unwrap();
         let input: String = fs::read_to_string(fname).unwrap();
         let input: Vec<&str> = input.trim_end().split('\n').collect();
@@ -79,6 +79,77 @@ impl Sky {
             .filter(|sbn| sbn.1.brightness > 0.01)
             .collect();
         Self::from(stars)
+    }
+
+    pub fn from_converted_file(fname: &str) -> Self {
+        let sbn_re = Regex::new("^(.{5}),(\\d\\d)(\\d\\d)(\\d\\d\\.\\d),([+-])(\\d\\d)(\\d\\d)(\\d\\d),(-?)([0-9. ]{4})").unwrap();
+        let input: String = fs::read_to_string(fname).unwrap();
+        let input: Vec<&str> = input.trim_end().split('\n').collect();
+        let stars: Vec<StBrNm> = input
+            .iter()
+            .map(|&line| Self::from_line(line, &sbn_re))
+            .filter(|sbn| sbn.1.brightness > 0.01)
+            .collect();
+        Self::from(stars)
+    }
+    pub fn convert_catalog_file(
+        infile: &str,
+        outfile: &str,
+        max_magnitude: f32,
+    ) -> Result<u8, std::io::Error> {
+        let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d\\d\\d\\d\\d\\.\\d)([+-]\\d\\d\\d\\d\\d\\d).{12}([+ -][0-9. ]{4})").unwrap();
+        let conversion_map: HashMap<&str, &str> = HashMap::from([
+            ("   ", " "),
+            ("Alp", "α"),
+            ("Bet", "β"),
+            ("Gam", "γ"),
+            ("Del", "δ"),
+            ("Eps", "ε"),
+            ("Zet", "ζ"),
+            ("Eta", "η"),
+            ("The", "θ"),
+            ("Iot", "ι"),
+            ("Kap", "κ"),
+            ("Lam", "λ"),
+            ("Mu ", "μ"),
+            ("Nu ", "ν"),
+            ("Xi ", "ξ"),
+            ("Omi", "ο"),
+            ("Pi ", "π"),
+            ("Rho", "ρ"),
+            ("Sig", "σ"),
+            ("Tau", "τ"),
+            ("Psi", "ψ"),
+            ("Phi", "φ"),
+            ("Ups", "υ"),
+            ("Ome", "ω"),
+            ("Chi", "χ"),
+        ]);
+        let input: String = fs::read_to_string(infile).unwrap();
+        let input: Vec<&str> = input.trim_end().split('\n').collect();
+        let outb: Vec<String> = input
+            .iter()
+            .filter_map(|line| {
+                let sbn = sbn_re.captures(line).unwrap();
+                let name = String::from(sbn.get(1).unwrap().as_str());
+                let name = format!(
+                    "{}{}",
+                    conversion_map[name.get(0..3).unwrap()],
+                    name.get(3..).unwrap()
+                );
+                let ra = String::from(sbn.get(2).unwrap().as_str());
+                let dec = String::from(sbn.get(3).unwrap().as_str());
+                let mag: f32 = sbn.get(4).unwrap().as_str().trim().parse().unwrap();
+                if mag <= max_magnitude {
+                    Some(format!("{name},{ra},{dec},{mag:.2}"))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        fs::write(outfile, outb.join("\n"))?;
+        Ok(0)
     }
 
     pub fn len(&self) -> usize {

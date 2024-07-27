@@ -2,7 +2,7 @@ use cuyat::sky::Sky;
 use cuyat::view::SkyView;
 
 fn main() {
-    let sky = Sky::from_file("bsc5.dat");
+    let sky = Sky::from_converted_file("bsc5.csv");
     let (sky_view, score_rc) = SkyView::new_from(sky, false);
     // let (sky_view, score_rc) = SkyView::new(24);
     let mut siv = cursive::default();
