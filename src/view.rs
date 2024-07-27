@@ -1,13 +1,13 @@
-use std::{cell::RefCell, f32::consts::PI, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use cursive::{
     event::{Event, EventResult},
     theme::{Color, ColorStyle},
     Printer, Vec2, View,
 };
-use nalgebra::{OVector, UnitQuaternion, U3};
+use nalgebra::UnitQuaternion;
 
-use crate::sky::{FoV, Sky};
+use crate::sky::{random_quaternion, FoV, Sky};
 
 #[derive(Clone)]
 struct Options {
@@ -87,7 +87,7 @@ impl SkyView {
         if self.options.renew_sky {
             self.sky = Sky::random_with_stars(self.sky.len());
         } else {
-            self.sky = self.sky.with_attitude(random_quaternion());
+            self.sky = self.sky.with_random_quaternion();
         }
         self.q = random_quaternion();
         self.step = 0.125;
@@ -185,11 +185,6 @@ impl View for SkyView {
         }
         EventResult::Consumed(None)
     }
-}
-
-fn random_quaternion() -> nalgebra::Unit<nalgebra::Quaternion<f32>> {
-    let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
-    UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2])
 }
 
 #[derive(Debug)]

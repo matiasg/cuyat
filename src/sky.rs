@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, f32::consts::PI, fs};
 
-use nalgebra::{DVector, Dyn, OMatrix, SVector, UnitQuaternion, U3};
+use nalgebra::{DVector, Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
 use regex::Regex;
 
 type SkyMat = OMatrix<f32, Dyn, U3>;
@@ -198,6 +198,15 @@ impl Sky {
         let sky = Self { stars };
         sky.seen_from(Star::new(5.0, 5.0, 5.0))
     }
+
+    pub fn with_random_quaternion(&self) -> Sky {
+        self.with_attitude(random_quaternion())
+    }
+}
+
+pub fn random_quaternion() -> nalgebra::Unit<nalgebra::Quaternion<f32>> {
+    let rpy: OVector<f32, U3> = OVector::<f32, U3>::new_random() * 2.0 * PI;
+    UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2])
 }
 
 #[derive(Clone)]
