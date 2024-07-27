@@ -141,23 +141,23 @@ impl View for SkyView {
 
     fn on_event(&mut self, event: Event) -> EventResult {
         match event {
-            Event::Char('p') => {
+            Event::Char('P') => {
                 self.rotate(-1.0, 0.0, 0.0);
             }
-            Event::Char('P') => {
+            Event::Char('p') => {
                 self.rotate(1.0, 0.0, 0.0);
             }
-            Event::Char('y') => {
+            Event::Char('Y') => {
                 self.rotate(0.0, 1.0, 0.0);
             }
-            Event::Char('Y') => {
+            Event::Char('y') => {
                 self.rotate(0.0, -1.0, 0.0);
-            }
-            Event::Char('r') => {
-                self.rotate(0.0, 0.0, -1.0);
             }
             Event::Char('R') => {
                 self.rotate(0.0, 0.0, 1.0);
+            }
+            Event::Char('r') => {
+                self.rotate(0.0, 0.0, -1.0);
             }
             Event::Char('s') => {
                 self.step /= 2.0;
