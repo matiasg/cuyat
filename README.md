@@ -38,3 +38,5 @@ The score at the end is the average of the individual scores of each game you pl
 The goal is to get the smallest score possible.
 The score in each game increases with the number of moves that you make and
 decreases with the distance to the target that you reach.
+
+Original Catalog: [Yale bright star catalog BSC5](http://tdc-www.harvard.edu/catalogs/bsc5.html)
