@@ -34,8 +34,18 @@ pub struct Sky {
 }
 
 impl Sky {
-    pub fn from(stars: Vec<StBrNm>) -> Self {
-        Self { stars }
+    pub fn new(catalog: &Option<String>, nstars: usize) -> Self {
+        match catalog {
+            None => Self::random_with_stars(nstars),
+            Some(ref filename) => {
+                Self::from_converted_file(filename.as_str(), nstars).with_random_quaternion()
+            }
+        }
+    }
+    pub fn from(stars: &[StBrNm]) -> Self {
+        Self {
+            stars: stars.to_vec(),
+        }
     }
 
     pub fn from_line(line: &str, sbn_re: &Regex) -> StBrNm {
@@ -78,19 +88,21 @@ impl Sky {
             .map(|&line| Self::from_line(line, &sbn_re))
             .filter(|sbn| sbn.1.brightness > 0.01)
             .collect();
-        Self::from(stars)
+        Self::from(&stars)
     }
 
-    pub fn from_converted_file(fname: &str) -> Self {
+    pub fn from_converted_file(fname: &str, nstars: usize) -> Self {
         let sbn_re = Regex::new("^(.{5}),(\\d\\d)(\\d\\d)(\\d\\d\\.\\d),([+-])(\\d\\d)(\\d\\d)(\\d\\d),(-?)([0-9. ]{4})").unwrap();
         let input: String = fs::read_to_string(fname).unwrap();
         let input: Vec<&str> = input.trim_end().split('\n').collect();
-        let stars: Vec<StBrNm> = input
+        let mut stars: Vec<StBrNm> = input
             .iter()
             .map(|&line| Self::from_line(line, &sbn_re))
             .filter(|sbn| sbn.1.brightness > 0.01)
             .collect();
-        Self::from(stars)
+        stars.sort_by(|sbn1, sbn2| sbn1.1.brightness.total_cmp(&sbn2.1.brightness));
+        let eff_nstars = stars.len().min(nstars);
+        Self::from(stars.get(stars.len() - eff_nstars..).unwrap())
     }
     pub fn convert_catalog_file(
         infile: &str,
@@ -314,7 +326,7 @@ mod test {
     }
     #[test]
     fn test_sky() {
-        let sky = Sky::from(stars());
+        let sky = Sky::from(&stars());
         assert_eq!(sky.len(), 2);
         let pos = Position::new(-1.0, -2.0, -3.0);
         let from_pos = sky.seen_from(pos);
@@ -344,14 +356,14 @@ mod test {
     #[test]
     fn test_fov() {
         let fov = FoV::new(1.0, 2.5);
-        let proj_stars = fov.project_sky(&Sky::from(stars()));
+        let proj_stars = fov.project_sky(&Sky::from(&stars()));
         assert!((proj_stars[0].0 - Fpp::new(0.0, 0.2)).norm() < 1e-5);
         assert!((proj_stars[1].0 - Fpp::new(0.6, 0.32)).norm() < 1e-5);
     }
 
     #[test]
     fn test_project() {
-        let sky = Sky::from(stars());
+        let sky = Sky::from(&stars());
         let fov = FoV::new(1.0, 1.0);
         let p: Vec<_> = fov
             .project_sky_to_screen(sky.clone(), 60, 60)

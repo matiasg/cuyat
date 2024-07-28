@@ -13,7 +13,8 @@ use crate::sky::{random_quaternion, FoV, Sky};
 struct Options {
     show_distance: bool,
     show_star_names: bool,
-    renew_sky: bool,
+    catalog_filename: Option<String>,
+    nstars: usize,
 }
 
 #[derive(Clone)]
@@ -28,19 +29,16 @@ pub struct SkyView {
 }
 
 impl SkyView {
-    pub fn new(nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
-        let sky = Sky::random_with_stars(nstars);
-        Self::new_from(sky, true)
-    }
-
-    pub fn new_from(sky: Sky, renew_sky: bool) -> (Self, Rc<RefCell<Scoring>>) {
-        let fov = FoV::new(2.0, 2.0);
-        let scoring = Rc::new(RefCell::new(Scoring::default()));
+    pub fn new(catalog: Option<String>, nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
+        let sky = Sky::new(&catalog, nstars);
         let options = Options {
             show_distance: false,
             show_star_names: true,
-            renew_sky,
+            catalog_filename: catalog,
+            nstars,
         };
+        let fov = FoV::new(2.0, 2.0);
+        let scoring = Rc::new(RefCell::new(Scoring::default()));
         let q = random_quaternion();
         (
             Self {
@@ -91,11 +89,12 @@ impl SkyView {
         (*self.scoring)
             .borrow_mut()
             .score_and_reset(self.distance());
-        if self.options.renew_sky {
-            self.sky = Sky::random_with_stars(self.sky.len());
-        } else {
-            self.sky = self.sky.with_random_quaternion();
-        }
+        self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars);
+        // if self.options.renew_sky {
+        //     self.sky = Sky::random_with_stars(self.sky.len());
+        // } else {
+        //     self.sky = self.sky.with_random_quaternion();
+        // }
         self.q = random_quaternion();
         self.step = 0.125;
     }
