@@ -90,11 +90,6 @@ impl SkyView {
             .borrow_mut()
             .score_and_reset(self.distance());
         self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars);
-        // if self.options.renew_sky {
-        //     self.sky = Sky::random_with_stars(self.sky.len());
-        // } else {
-        //     self.sky = self.sky.with_random_quaternion();
-        // }
         self.q = random_quaternion();
         self.step = 0.125;
     }
@@ -146,6 +141,7 @@ impl View for SkyView {
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
+        // TODO: add key for changing random/real stars
         match event {
             Event::Char('P') => {
                 self.rotate(-1.0, 0.0, 0.0);
