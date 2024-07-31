@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::{collections::HashMap, f32::consts::PI, fs};
 
 use nalgebra::{DVector, Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
@@ -110,33 +111,7 @@ impl Sky {
         max_magnitude: f32,
     ) -> Result<u8, std::io::Error> {
         let sbn_re = Regex::new("^.{7}(.{7}).{61}(\\d\\d\\d\\d\\d\\d\\.\\d)([+-]\\d\\d\\d\\d\\d\\d).{12}([+ -][0-9. ]{4})").unwrap();
-        let conversion_map: HashMap<&str, &str> = HashMap::from([
-            ("   ", " "),
-            ("Alp", "α"),
-            ("Bet", "β"),
-            ("Gam", "γ"),
-            ("Del", "δ"),
-            ("Eps", "ε"),
-            ("Zet", "ζ"),
-            ("Eta", "η"),
-            ("The", "θ"),
-            ("Iot", "ι"),
-            ("Kap", "κ"),
-            ("Lam", "λ"),
-            ("Mu ", "μ"),
-            ("Nu ", "ν"),
-            ("Xi ", "ξ"),
-            ("Omi", "ο"),
-            ("Pi ", "π"),
-            ("Rho", "ρ"),
-            ("Sig", "σ"),
-            ("Tau", "τ"),
-            ("Psi", "ψ"),
-            ("Phi", "φ"),
-            ("Ups", "υ"),
-            ("Ome", "ω"),
-            ("Chi", "χ"),
-        ]);
+        let conversion_map = greek_names_map();
         let input: String = fs::read_to_string(infile).unwrap();
         let input: Vec<&str> = input.trim_end().split('\n').collect();
         let outb: Vec<String> = input
@@ -195,14 +170,22 @@ impl Sky {
 
     pub fn random_with_stars(n: usize) -> Self {
         let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
+        // FIXME: use better probability density of brightnesses
         let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
-        let names: Vec<String> = (0..n).map(|i| format!("{i}")).collect();
+        let prefs: Vec<&str> = greek_names_map().values().copied().collect();
+        let consts: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+        let names = consts
+            .iter()
+            .cartesian_product(prefs.iter())
+            .map(|(c, p)| format!("{p}{c}"));
+
+        // let names: Vec<String> = (0..n).map(|i| format!("{i}")).collect();
         let stars: Vec<StBrNm> = stars_positions
             .iter()
             .copied()
             .zip(brightnesses.iter().map(|&b| Brightness::new(b)))
-            .zip(names.iter())
-            .map(|((s, b), n)| (s, b, String::from(n)))
+            .zip(names)
+            .map(|((s, b), n)| (s, b, n))
             .collect();
         let sky = Self { stars };
         sky.seen_from(Star::new(5.0, 5.0, 5.0))
@@ -211,6 +194,36 @@ impl Sky {
     pub fn with_random_quaternion(&self) -> Sky {
         self.with_attitude(random_quaternion())
     }
+}
+
+fn greek_names_map<'a>() -> HashMap<&'a str, &'a str> {
+    HashMap::from([
+        ("   ", " "),
+        ("Alp", "α"),
+        ("Bet", "β"),
+        ("Gam", "γ"),
+        ("Del", "δ"),
+        ("Eps", "ε"),
+        ("Zet", "ζ"),
+        ("Eta", "η"),
+        ("The", "θ"),
+        ("Iot", "ι"),
+        ("Kap", "κ"),
+        ("Lam", "λ"),
+        ("Mu ", "μ"),
+        ("Nu ", "ν"),
+        ("Xi ", "ξ"),
+        ("Omi", "ο"),
+        ("Pi ", "π"),
+        ("Rho", "ρ"),
+        ("Sig", "σ"),
+        ("Tau", "τ"),
+        ("Psi", "ψ"),
+        ("Phi", "φ"),
+        ("Ups", "υ"),
+        ("Ome", "ω"),
+        ("Chi", "χ"),
+    ])
 }
 
 pub fn random_quaternion() -> nalgebra::Unit<nalgebra::Quaternion<f32>> {
