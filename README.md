@@ -27,6 +27,8 @@ For that, you use your keyboard like this:
 | s/S | scale              |
 | d   | show/hide distance |
 | n   | show/hide star names |
+| c   | use real/random catalog |
+| v/V | number of stars    |
 | space | score this game and start another |
 | q | end playing the game |
 
