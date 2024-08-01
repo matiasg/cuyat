@@ -168,10 +168,10 @@ impl Sky {
         }
     }
 
-    pub fn random_with_stars(n: usize) -> Self {
-        let stars_positions: Vec<Star> = (0..n).map(|_| Star::new_random() * 10.0).collect();
+    pub fn random_with_stars(nstars: usize) -> Self {
+        let stars_positions: Vec<Star> = (0..nstars).map(|_| Star::new_random() * 10.0).collect();
         // FIXME: use better probability density of brightnesses
-        let brightnesses: DVector<f32> = DVector::<f32>::new_random(n);
+        let brightnesses: DVector<f32> = DVector::<f32>::new_random(nstars);
         let prefs: Vec<&str> = greek_names_map().values().copied().collect();
         let consts: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let names = consts
@@ -179,7 +179,6 @@ impl Sky {
             .cartesian_product(prefs.iter())
             .map(|(c, p)| format!("{p}{c}"));
 
-        // let names: Vec<String> = (0..n).map(|i| format!("{i}")).collect();
         let stars: Vec<StBrNm> = stars_positions
             .iter()
             .copied()
