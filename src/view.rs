@@ -182,6 +182,18 @@ impl View for SkyView {
             Event::Char('n') => {
                 self.options.show_star_names = !self.options.show_star_names;
             }
+            Event::Char('c') => {
+                self.options.catalog_filename = match self.options.catalog_filename {
+                    None => Some(String::from("bsc5.csv")),
+                    Some(_) => None,
+                };
+            }
+            Event::Char('v') => {
+                self.options.nstars = (self.options.nstars as f32 * 0.8) as usize;
+            }
+            Event::Char('V') => {
+                self.options.nstars = (self.options.nstars as f32 * 1.25) as usize;
+            }
             Event::Char('q') => {
                 self.restart();
                 return EventResult::Ignored;
