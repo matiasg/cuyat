@@ -23,9 +23,10 @@ pub struct SkyView {
     fov: FoV,
     q: UnitQuaternion<f32>,
     step: f32,
-    margin: usize,
     scoring: Rc<RefCell<Scoring>>,
     options: Options,
+    headers: usize,
+    vmargin: usize,
 }
 
 impl SkyView {
@@ -46,9 +47,10 @@ impl SkyView {
                 fov,
                 q,
                 step: 0.125,
-                margin: 1,
                 scoring: Rc::clone(&scoring),
                 options,
+                headers: 2,
+                vmargin: 1,
             },
             scoring,
         )
@@ -106,7 +108,7 @@ impl View for SkyView {
         let x_mid = x_max / 2;
         let y_max = p.size.y as u8;
 
-        let left = cursive::Vec2::new(0, 2);
+        let left = cursive::Vec2::new(0, self.headers);
         let left_printer = p.offset(left);
         self.draw_portion(self.q, &left_printer, x_mid, y_max);
 
@@ -115,7 +117,7 @@ impl View for SkyView {
             p.with_color(style, |printer| printer.print((x_mid, y), "|"))
         }
 
-        let right = cursive::Vec2::new(x_mid as usize + self.margin, 2);
+        let right = cursive::Vec2::new(x_mid as usize + self.vmargin, self.headers);
         let right_printer = p.offset(right);
         self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
 
@@ -124,7 +126,7 @@ impl View for SkyView {
         } else {
             String::from("")
         };
-        let status_bar = format!(
+        let header_1 = format!(
             "{}Step: {:.4}, zoom: {:.3}. Moves: {}, games: {}, score: {:.6}",
             distance,
             self.step,
@@ -133,8 +135,9 @@ impl View for SkyView {
             (*self.scoring).borrow().games,
             (*self.scoring).borrow().get_score(),
         );
-
-        p.with_color(style, |printer| printer.print((1, 0), status_bar.as_str()));
+        p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
+        let header_2 = format!("stars: {}", self.options.nstars,);
+        p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         Vec2::new(121, 32)
