@@ -98,7 +98,14 @@ impl SkyView {
             (*self.scoring).borrow().get_score(),
         );
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
-        let header_2 = format!("stars: {}", self.options.nstars,);
+        let header_2 = format!(
+            "Stars: {}. Catalog: {}",
+            self.options.nstars,
+            self.options
+                .catalog_filename
+                .clone()
+                .unwrap_or("random".to_string())
+        );
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
     }
 
@@ -196,6 +203,7 @@ impl View for SkyView {
                     None => Some(String::from("bsc5.csv")),
                     Some(_) => None,
                 };
+                self.restart();
             }
             Event::Char('v') => {
                 self.options.nstars = (self.options.nstars as f32 * 0.8) as usize;
