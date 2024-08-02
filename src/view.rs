@@ -82,6 +82,26 @@ impl SkyView {
         }
     }
 
+    fn draw_header(&self, p: &Printer, style: ColorStyle) {
+        let distance = if self.options.show_distance {
+            format!("distance: {:.6}, ", self.distance())
+        } else {
+            String::from("")
+        };
+        let header_1 = format!(
+            "{}Step: {:.4}, zoom: {:.3}. Moves: {}, games: {}, score: {:.6}",
+            distance,
+            self.step,
+            self.fov.zoom(),
+            (*self.scoring).borrow().moves,
+            (*self.scoring).borrow().games,
+            (*self.scoring).borrow().get_score(),
+        );
+        p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
+        let header_2 = format!("stars: {}", self.options.nstars,);
+        p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
+    }
+
     fn distance(&self) -> f32 {
         let (roll, pitch, yaw) = self.q.euler_angles();
         (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
@@ -121,23 +141,9 @@ impl View for SkyView {
         let right_printer = p.offset(right);
         self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
 
-        let distance = if self.options.show_distance {
-            format!("distance: {:.6}, ", self.distance())
-        } else {
-            String::from("")
-        };
-        let header_1 = format!(
-            "{}Step: {:.4}, zoom: {:.3}. Moves: {}, games: {}, score: {:.6}",
-            distance,
-            self.step,
-            self.fov.zoom(),
-            (*self.scoring).borrow().moves,
-            (*self.scoring).borrow().games,
-            (*self.scoring).borrow().get_score(),
-        );
-        p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
-        let header_2 = format!("stars: {}", self.options.nstars,);
-        p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
+        let header_offset = cursive::Vec2::new(1, 0);
+        let header_printer = p.offset(header_offset);
+        self.draw_header(&header_printer, style);
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         Vec2::new(121, 32)
