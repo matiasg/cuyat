@@ -1,7 +1,9 @@
 use cuyat::view::SkyView;
 
 fn main() {
-    let (sky_view, score_rc) = SkyView::new(Some(String::from("bsc5.csv")), 100);
+    // for random sky use this
+    // let (sky_view, score_rc) = SkyView::new(None, 200);
+    let (sky_view, score_rc) = SkyView::new(Some(String::from("bsc5.csv")), 400);
     let mut siv = cursive::default();
     siv.add_layer(sky_view);
     siv.add_global_callback('q', |s| s.quit());
@@ -21,8 +23,8 @@ fn main() {
 
         ",
         score.counted_moves,
-        score.total,
-        score.games,
+        score.total.iter().sum::<f32>(),
+        score.total.len(),
         score.get_score()
     );
 }

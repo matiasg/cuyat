@@ -94,7 +94,7 @@ impl SkyView {
             self.step,
             self.fov.zoom(),
             (*self.scoring).borrow().moves,
-            (*self.scoring).borrow().games,
+            (*self.scoring).borrow().total.len(),
             (*self.scoring).borrow().get_score(),
         );
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
@@ -223,9 +223,8 @@ impl View for SkyView {
 
 #[derive(Debug)]
 pub struct Scoring {
-    pub total: f32,
+    pub total: Vec<f32>,
     pub moves: usize,
-    pub games: usize,
     pub counted_moves: usize,
 }
 
@@ -235,22 +234,24 @@ impl Scoring {
     }
 
     fn score_and_reset(&mut self, add: f32) {
-        self.total += add * (self.moves as f32 + 20.0);
-        self.games += 1;
+        self.total.push(add * (self.moves as f32 + 20.0));
         self.counted_moves += self.moves;
         self.moves = 0;
     }
 
+    pub fn games(&self) -> usize {
+        self.total.len()
+    }
+
     pub fn get_score(&self) -> f32 {
-        self.total / (self.games as f32)
+        self.total.iter().sum::<f32>() / (self.total.len() as f32)
     }
 
     fn default() -> Scoring {
         Scoring {
-            total: 0f32,
+            total: vec![],
             moves: 0,
             counted_moves: 0,
-            games: 0,
         }
     }
 }
