@@ -1,10 +1,9 @@
 use itertools::Itertools;
 use std::{collections::HashMap, f32::consts::PI, fs};
 
-use nalgebra::{DVector, Dyn, OMatrix, OVector, SVector, UnitQuaternion, U3};
+use nalgebra::{DVector, OVector, SVector, UnitQuaternion, U3};
 use regex::Regex;
 
-type SkyMat = OMatrix<f32, Dyn, U3>;
 pub type Star = SVector<f32, 3>;
 type Position = SVector<f32, 3>;
 pub type Fpp = SVector<f32, 2>; // Focal Plane Point
