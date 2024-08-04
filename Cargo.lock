@@ -121,6 +121,8 @@ dependencies = [
  "cursive",
  "itertools",
  "nalgebra",
+ "rand",
+ "rand_distr",
  "regex",
 ]
 
