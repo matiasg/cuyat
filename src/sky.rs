@@ -1,7 +1,9 @@
 use itertools::Itertools;
+use rand::Rng;
 use std::{collections::HashMap, f32::consts::PI, fs};
 
 use nalgebra::{DVector, OVector, SVector, UnitQuaternion, U3};
+use rand_distr::{Distribution, Exp, Uniform};
 use regex::Regex;
 
 pub type Star = SVector<f32, 3>;
@@ -23,8 +25,25 @@ impl Brightness {
         let brightness: f32 = 0.01f32.powf((m - Self::MAX_MAG) / 5.0);
         Self { brightness }
     }
-    fn new(b: f32) -> Self {
+
+    pub fn new(b: f32) -> Self {
         Self { brightness: b }
+    }
+
+    /// random brightnesses of `nstars` stars.
+    /// This is not accurate but close to. The PI param of the Exp distribution
+    /// just fits well and is close enough to the best fit I could find.
+    /// The max_mag value is not the MAX_MAG one because otherwise it would
+    /// over represent high-bright stars.
+    fn random(nstars: usize) -> Vec<Self> {
+        let max_mag = -0.4f32;
+        let exp = Exp::new(PI).unwrap();
+        exp.sample_iter(&mut rand::thread_rng())
+            .filter(|&n| n > 1.0 / 5.5)
+            .take(nstars)
+            .map(|f: f32| max_mag + 1.0 / f)
+            .map(Brightness::for_magnitude)
+            .collect()
     }
 }
 
@@ -168,9 +187,24 @@ impl Sky {
     }
 
     pub fn random_with_stars(nstars: usize) -> Self {
-        let stars_positions: Vec<Star> = (0..nstars).map(|_| Star::new_random() * 10.0).collect();
-        // FIXME: use better probability density of brightnesses
-        let brightnesses: DVector<f32> = DVector::<f32>::new_random(nstars);
+        let unifd = Uniform::new(-1.0, 1.0);
+        let rng = rand::thread_rng();
+
+        let stars_positions: Vec<Star> = rng
+            .sample_iter(unifd)
+            .tuples::<(f32, f32, f32)>()
+            .filter_map(|(x, y, z)| {
+                let r = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
+                if r == 0.0 || r > 1.0 {
+                    None
+                } else {
+                    Some(Star::new(x / r, y / r, z / r))
+                }
+            })
+            .take(nstars)
+            .collect();
+
+        let brightnesses = Brightness::random(nstars);
         let prefs: Vec<&str> = greek_names_map().values().copied().collect();
         let consts: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let names = consts
@@ -181,12 +215,11 @@ impl Sky {
         let stars: Vec<StBrNm> = stars_positions
             .iter()
             .copied()
-            .zip(brightnesses.iter().map(|&b| Brightness::new(b)))
+            .zip(brightnesses.iter())
             .zip(names)
-            .map(|((s, b), n)| (s, b, n))
+            .map(|((s, &b), n)| (s, b, n))
             .collect();
-        let sky = Self { stars };
-        sky.seen_from(Star::new(5.0, 5.0, 5.0))
+        Self { stars }
     }
 
     pub fn with_random_quaternion(&self) -> Sky {
