@@ -98,13 +98,22 @@ impl SkyView {
             (*self.scoring).borrow().get_score(),
         );
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
+        let quat = if self.options.show_distance {
+            format!(
+                ", quat: _ + {} i + {} j + {} k",
+                self.q[0], self.q[1], self.q[2]
+            )
+        } else {
+            String::from("")
+        };
         let header_2 = format!(
-            "Stars: {}. Catalog: {}",
+            "Stars: {}. Catalog: {}{}",
             self.options.nstars,
             self.options
                 .catalog_filename
                 .clone()
-                .unwrap_or("random".to_string())
+                .unwrap_or("random".to_string()),
+            quat
         );
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
     }
