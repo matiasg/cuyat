@@ -2,7 +2,7 @@ use itertools::Itertools;
 use rand::Rng;
 use std::{collections::HashMap, f32::consts::PI, fs};
 
-use nalgebra::{DVector, OVector, SVector, UnitQuaternion, U3};
+use nalgebra::{OVector, SVector, UnitQuaternion, U3};
 use rand_distr::{Distribution, Exp, Uniform};
 use regex::Regex;
 
@@ -16,7 +16,7 @@ pub type StBrNm = (Star, Brightness, String);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Brightness {
-    brightness: f32, // expected to be between 0 and 1
+    pub brightness: f32, // expected to be between 0 and 1
 }
 impl Brightness {
     const MAX_MAG: f32 = -1.46f32;
@@ -31,17 +31,17 @@ impl Brightness {
     }
 
     /// random brightnesses of `nstars` stars.
-    /// This is not accurate but close to. The PI param of the Exp distribution
-    /// just fits well and is close enough to the best fit I could find.
-    /// The max_mag value is not the MAX_MAG one because otherwise it would
-    /// over represent high-bright stars.
-    fn random(nstars: usize) -> Vec<Self> {
-        let max_mag = -0.4f32;
-        let exp = Exp::new(PI).unwrap();
+    /// This is not accurate but close to.
+    pub fn random(nstars: usize) -> Vec<Self> {
+        let alpha = 5.6f32;
+        let beta = 1.238f32;
+        let lambda = 100f32.ln() * beta / 5.0;
+        let max_mag = 5.0 / (2.0 * beta) * (nstars as f32 / alpha).log10();
+        let exp = Exp::new(lambda).unwrap();
         exp.sample_iter(&mut rand::thread_rng())
-            .filter(|&n| n > 1.0 / 5.5)
+            .filter(|&n| max_mag - n > Self::MAX_MAG)
             .take(nstars)
-            .map(|f: f32| max_mag + 1.0 / f)
+            .map(|n: f32| max_mag - n)
             .map(Brightness::for_magnitude)
             .collect()
     }
@@ -49,7 +49,7 @@ impl Brightness {
 
 #[derive(Clone, Debug)]
 pub struct Sky {
-    stars: Vec<StBrNm>,
+    pub stars: Vec<StBrNm>,
 }
 
 impl Sky {
@@ -117,7 +117,6 @@ impl Sky {
         let mut stars: Vec<StBrNm> = input
             .iter()
             .map(|&line| Self::from_line(line, &sbn_re))
-            .filter(|sbn| sbn.1.brightness > 0.01)
             .collect();
         stars.sort_by(|sbn1, sbn2| sbn1.1.brightness.total_cmp(&sbn2.1.brightness));
         let eff_nstars = stars.len().min(nstars);
@@ -206,7 +205,7 @@ impl Sky {
 
         let brightnesses = Brightness::random(nstars);
         let prefs: Vec<&str> = greek_names_map().values().copied().collect();
-        let consts: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+        let consts: Vec<char> = ('a'..='z').chain('A'..='Z').chain('😀'..'🙂').collect();
         let names = consts
             .iter()
             .cartesian_product(prefs.iter())
