@@ -42,3 +42,6 @@ The score in each game increases with the number of moves that you make and
 decreases with the distance to the target that you reach.
 
 Original Catalog: [Yale bright star catalog BSC5](http://tdc-www.harvard.edu/catalogs/bsc5.html)
+
+
+![Example of rotations](https://github.com/user-attachments/assets/6c07b428-93c6-4539-b318-93dcc05fea5c)
