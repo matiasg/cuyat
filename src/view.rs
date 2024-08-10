@@ -131,7 +131,9 @@ impl SkyView {
         (*self.scoring)
             .borrow_mut()
             .score_and_reset(self.distance());
-        self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars);
+        self.target_q = random_quaternion();
+        self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars)
+            .with_attitude(self.target_q);
         self.real_q = random_quaternion();
         self.step = 0.125;
     }
