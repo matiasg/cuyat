@@ -21,7 +21,8 @@ struct Options {
 pub struct SkyView {
     pub sky: Sky,
     fov: FoV,
-    q: UnitQuaternion<f32>,
+    target_q: UnitQuaternion<f32>,
+    real_q: UnitQuaternion<f32>,
     step: f32,
     scoring: Rc<RefCell<Scoring>>,
     options: Options,
@@ -31,7 +32,8 @@ pub struct SkyView {
 
 impl SkyView {
     pub fn new(catalog: Option<String>, nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
-        let sky = Sky::new(&catalog, nstars);
+        let target_q = random_quaternion();
+        let sky = Sky::new(&catalog, nstars).with_attitude(target_q);
         let options = Options {
             show_distance: false,
             show_star_names: true,
@@ -40,12 +42,13 @@ impl SkyView {
         };
         let fov = FoV::new(2.0, 2.0);
         let scoring = Rc::new(RefCell::new(Scoring::default()));
-        let q = random_quaternion();
+        let real_q = random_quaternion();
         (
             Self {
                 sky,
                 fov,
-                q,
+                target_q,
+                real_q,
                 step: 0.125,
                 scoring: Rc::clone(&scoring),
                 options,
@@ -57,8 +60,9 @@ impl SkyView {
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
-        self.q =
-            UnitQuaternion::from_euler_angles(x * self.step, y * self.step, z * self.step) * self.q;
+        self.real_q =
+            UnitQuaternion::from_euler_angles(x * self.step, y * self.step, z * self.step)
+                * self.real_q;
         (*self.scoring).borrow_mut().add_move();
     }
 
@@ -101,7 +105,7 @@ impl SkyView {
         let quat = if self.options.show_distance {
             format!(
                 ", quat: _ + {} i + {} j + {} k",
-                self.q[0], self.q[1], self.q[2]
+                self.real_q[0], self.real_q[1], self.real_q[2]
             )
         } else {
             String::from("")
@@ -119,7 +123,7 @@ impl SkyView {
     }
 
     fn distance(&self) -> f32 {
-        let (roll, pitch, yaw) = self.q.euler_angles();
+        let (roll, pitch, yaw) = (self.target_q / self.real_q).euler_angles();
         (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
     }
 
@@ -128,7 +132,7 @@ impl SkyView {
             .borrow_mut()
             .score_and_reset(self.distance());
         self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars);
-        self.q = random_quaternion();
+        self.real_q = random_quaternion();
         self.step = 0.125;
     }
 
@@ -146,7 +150,7 @@ impl View for SkyView {
 
         let left = cursive::Vec2::new(0, self.headers);
         let left_printer = p.offset(left);
-        self.draw_portion(self.q, &left_printer, x_mid, y_max);
+        self.draw_portion(self.real_q, &left_printer, x_mid, y_max);
 
         let style = ColorStyle::new(Color::Rgb(20, 200, 200), Color::Rgb(0, 0, 0));
         for y in 0..y_max {
@@ -155,7 +159,7 @@ impl View for SkyView {
 
         let right = cursive::Vec2::new(x_mid as usize + self.vmargin, self.headers);
         let right_printer = p.offset(right);
-        self.draw_portion(UnitQuaternion::default(), &right_printer, x_mid, y_max);
+        self.draw_portion(self.target_q, &right_printer, x_mid, y_max);
 
         let header_offset = cursive::Vec2::new(1, 0);
         let header_printer = p.offset(header_offset);
