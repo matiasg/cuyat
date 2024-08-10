@@ -56,9 +56,7 @@ impl Sky {
     pub fn new(catalog: &Option<String>, nstars: usize) -> Self {
         match catalog {
             None => Self::random_with_stars(nstars),
-            Some(ref filename) => {
-                Self::from_converted_file(filename.as_str(), nstars).with_random_quaternion()
-            }
+            Some(ref filename) => Self::from_converted_file(filename.as_str(), nstars),
         }
     }
     pub fn from(stars: &[StBrNm]) -> Self {
