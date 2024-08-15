@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::format, rc::Rc};
 
 use cursive::{
     event::{Event, EventResult},
@@ -52,7 +52,7 @@ impl SkyView {
                 step: 0.125,
                 scoring: Rc::clone(&scoring),
                 options,
-                headers: 2,
+                headers: 3,
                 vmargin: 1,
             },
             scoring,
@@ -102,13 +102,19 @@ impl SkyView {
             (*self.scoring).borrow().get_score(),
         );
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
-        let quat = if self.options.show_distance {
-            format!(
-                ", quat: _ + {} i + {} j + {} k",
-                self.real_q[0], self.real_q[1], self.real_q[2]
+        let (real_q, target_q) = if self.options.show_distance {
+            (
+                format!(
+                    ", quat: _ + {} i + {} j + {} k",
+                    self.real_q[0], self.real_q[1], self.real_q[2]
+                ),
+                format!(
+                    "target: _ + {} i + {} j + {} k",
+                    self.target_q[0], self.target_q[1], self.target_q[2]
+                ),
             )
         } else {
-            String::from("")
+            (String::from(""), String::from(""))
         };
         let header_2 = format!(
             "Stars: {}. Catalog: {}{}",
@@ -117,9 +123,10 @@ impl SkyView {
                 .catalog_filename
                 .clone()
                 .unwrap_or("random".to_string()),
-            quat
+            real_q
         );
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
+        p.with_color(style, |printer| printer.print((1, 2), target_q.as_str()));
     }
 
     fn distance(&self) -> f32 {
@@ -168,7 +175,7 @@ impl View for SkyView {
         self.draw_header(&header_printer, style);
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
-        Vec2::new(121, 32)
+        Vec2::new(121, 36)
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
