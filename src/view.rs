@@ -127,14 +127,16 @@ impl SkyView {
         let (roll, pitch, yaw) = (self.target_q / self.real_q).euler_angles();
         (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
     }
-
+    fn make_sky(&mut self) {
+        self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars)
+            .with_attitude(self.target_q);
+    }
     fn restart(&mut self) {
         (*self.scoring)
             .borrow_mut()
             .score_and_reset(self.distance());
         self.target_q = random_quaternion();
-        self.sky = Sky::new(&self.options.catalog_filename, self.options.nstars)
-            .with_attitude(self.target_q);
+        self.make_sky();
         self.real_q = random_quaternion();
         self.step = 0.125;
     }
@@ -223,9 +225,11 @@ impl View for SkyView {
             }
             Event::Char('v') => {
                 self.options.nstars = (self.options.nstars as f32 * 0.8) as usize;
+                self.make_sky();
             }
             Event::Char('V') => {
                 self.options.nstars = (self.options.nstars as f32 * 1.25) as usize;
+                self.make_sky();
             }
             Event::Char('q') => {
                 self.restart();
