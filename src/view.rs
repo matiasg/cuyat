@@ -5,7 +5,7 @@ use cursive::{
     theme::{Color, ColorStyle},
     Printer, Vec2, View,
 };
-use nalgebra::UnitQuaternion;
+use nalgebra::{Quaternion, UnitQuaternion};
 
 use crate::sky::{random_quaternion, FoV, Sky};
 
@@ -86,15 +86,18 @@ impl SkyView {
         }
     }
 
+    fn _quat_coords(quat: UnitQuaternion<f32>) -> String {
+        format!("_ + {:.5} i + {:.5} j + {:.5} k", quat[0], quat[1], quat[2])
+    }
+
     fn draw_header(&self, p: &Printer, style: ColorStyle) {
-        let distance = if self.options.show_distance {
-            format!("distance: {:.6}, ", self.distance())
-        } else {
-            String::from("")
-        };
         let header_1 = format!(
-            "{}Step: {:.4}, zoom: {:.3}. Moves: {}, games: {}, score: {:.6}",
-            distance,
+            "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
+            self.options.nstars,
+            self.options
+                .catalog_filename
+                .clone()
+                .unwrap_or("random".to_string()),
             self.step,
             self.fov.zoom(),
             (*self.scoring).borrow().moves,
@@ -102,31 +105,22 @@ impl SkyView {
             (*self.scoring).borrow().get_score(),
         );
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
-        let (real_q, target_q) = if self.options.show_distance {
+        let (real_q, difference, distance) = if self.options.show_distance {
             (
+                format!("State:  {}", Self::_quat_coords(self.real_q)),
                 format!(
-                    ", quat: _ + {} i + {} j + {} k",
-                    self.real_q[0], self.real_q[1], self.real_q[2]
+                    ",   t/s: {}",
+                    Self::_quat_coords(self.target_q / self.real_q)
                 ),
-                format!(
-                    "target: _ + {} i + {} j + {} k",
-                    self.target_q[0], self.target_q[1], self.target_q[2]
-                ),
+                format!(",   distance: {:.6}", self.distance()),
             )
         } else {
-            (String::from(""), String::from(""))
+            (String::from(""), String::from(""), String::from(""))
         };
-        let header_2 = format!(
-            "Stars: {}. Catalog: {}{}",
-            self.options.nstars,
-            self.options
-                .catalog_filename
-                .clone()
-                .unwrap_or("random".to_string()),
-            real_q
-        );
+        let header_2 = format!("Target: {}{}", Self::_quat_coords(self.target_q), distance);
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
-        p.with_color(style, |printer| printer.print((1, 2), target_q.as_str()));
+        let header_3 = format!("{}{}", real_q, difference);
+        p.with_color(style, |printer| printer.print((1, 2), header_3.as_str()));
     }
 
     fn distance(&self) -> f32 {
