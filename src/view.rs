@@ -1,11 +1,11 @@
-use std::{cell::RefCell, fmt::format, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use cursive::{
     event::{Event, EventResult},
     theme::{Color, ColorStyle},
     Printer, Vec2, View,
 };
-use nalgebra::{Quaternion, UnitQuaternion};
+use nalgebra::UnitQuaternion;
 
 use crate::sky::{random_quaternion, FoV, Sky};
 
@@ -15,6 +15,7 @@ struct Options {
     show_star_names: bool,
     catalog_filename: Option<String>,
     nstars: usize,
+    show_help: bool,
 }
 
 #[derive(Clone)]
@@ -39,6 +40,7 @@ impl SkyView {
             show_star_names: true,
             catalog_filename: catalog,
             nstars,
+            show_help: false,
         };
         let fov = FoV::new(2.0, 2.0);
         let scoring = Rc::new(RefCell::new(Scoring::default()));
@@ -123,6 +125,28 @@ impl SkyView {
         p.with_color(style, |printer| printer.print((1, 2), header_3.as_str()));
     }
 
+    fn show_help(&self, p: &Printer, style: ColorStyle) {
+        let help_lines = [
+            "y/Y  : yaw",
+            "p/P  : pitch",
+            "r/R  : roll",
+            "z/Z  : zoom",
+            "s/S  : scale",
+            "d    : show/hide distance",
+            "n    : show/hide star names",
+            "c    : use real/random catalog",
+            "v/V  : number of stars",
+            "space: score and restart",
+            "?    : show/hide this help",
+            "q    : end playing the game",
+        ];
+        let max_len = help_lines.iter().map(|l| l.len()).max().unwrap();
+        for (i, line) in help_lines.iter().enumerate() {
+            let padded_line = format!("{}{}", line, " ".repeat(max_len - line.len()));
+            p.with_color(style, |printer| printer.print((0, i), padded_line.as_str()));
+        }
+    }
+
     fn distance(&self) -> f32 {
         let (roll, pitch, yaw) = (self.target_q / self.real_q).euler_angles();
         (roll.powi(2) + pitch.powi(2) + yaw.powi(2)).sqrt()
@@ -169,6 +193,12 @@ impl View for SkyView {
         let header_offset = cursive::Vec2::new(1, 0);
         let header_printer = p.offset(header_offset);
         self.draw_header(&header_printer, style);
+        if self.options.show_help {
+            let help_c = cursive::Vec2::new(x_mid as usize * 2 / 3 + self.vmargin, self.headers);
+            let help_printer = p.offset(help_c);
+            let style = ColorStyle::new(Color::Rgb(200, 200, 20), Color::Rgb(60, 60, 60));
+            self.show_help(&help_printer, style);
+        }
     }
     fn required_size(&mut self, _constraint: Vec2) -> Vec2 {
         Vec2::new(121, 36)
@@ -234,6 +264,9 @@ impl View for SkyView {
             Event::Char('q') => {
                 self.restart();
                 return EventResult::Ignored;
+            }
+            Event::Char('?') => {
+                self.options.show_help = !self.options.show_help;
             }
             _ => return EventResult::Ignored,
         }
