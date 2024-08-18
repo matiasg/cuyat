@@ -275,7 +275,7 @@ impl Scoring {
         self.moves += 1;
     }
 
-    fn score_and_reset(&mut self, add: f32) {
+    pub fn score_and_reset(&mut self, add: f32) {
         self.total.push(add * (self.moves as f32 + 20.0));
         self.counted_moves += self.moves;
         self.moves = 0;
