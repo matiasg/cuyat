@@ -7,15 +7,15 @@ use cursive::{
 };
 use nalgebra::UnitQuaternion;
 
-use crate::sky::{random_quaternion, FoV, Sky};
+use crate::sky::{quat_coords_str, random_quaternion, FoV, Sky};
 
 #[derive(Clone)]
-struct Options {
-    show_distance: bool,
-    show_star_names: bool,
-    catalog_filename: Option<String>,
-    nstars: usize,
-    show_help: bool,
+pub struct Options {
+    pub(crate) show_distance: bool,
+    pub(crate) show_star_names: bool,
+    pub(crate) catalog_filename: Option<String>,
+    pub(crate) nstars: usize,
+    pub(crate) show_help: bool,
 }
 
 #[derive(Clone)]
@@ -84,10 +84,6 @@ impl SkyView {
         }
     }
 
-    fn _quat_coords(quat: UnitQuaternion<f32>) -> String {
-        format!("_ + {:.5} i + {:.5} j + {:.5} k", quat[0], quat[1], quat[2])
-    }
-
     fn draw_header(&self, p: &Printer, style: ColorStyle) {
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
@@ -105,17 +101,14 @@ impl SkyView {
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
         let (real_q, difference, distance) = if self.options.show_distance {
             (
-                format!("State:  {}", Self::_quat_coords(self.real_q)),
-                format!(
-                    ",   t/s: {}",
-                    Self::_quat_coords(self.target_q / self.real_q)
-                ),
+                format!("State:  {}", quat_coords_str(self.real_q)),
+                format!(",   t/s: {}", quat_coords_str(self.target_q / self.real_q)),
                 format!(",   distance: {:.6}", self.distance()),
             )
         } else {
             (String::from(""), String::from(""), String::from(""))
         };
-        let header_2 = format!("Target: {}{}", Self::_quat_coords(self.target_q), distance);
+        let header_2 = format!("Target: {}{}", quat_coords_str(self.target_q), distance);
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
         let header_3 = format!("{}{}", real_q, difference);
         p.with_color(style, |printer| printer.print((1, 2), header_3.as_str()));
@@ -278,7 +271,7 @@ pub struct Scoring {
 }
 
 impl Scoring {
-    fn add_move(&mut self) {
+    pub fn add_move(&mut self) {
         self.moves += 1;
     }
 

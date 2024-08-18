@@ -1,10 +1,10 @@
 use std::{cell::RefCell, env, rc::Rc};
 
 use cuyat::{
-    gview::GSkyView,
+    gview::{self, GSkyView},
     view::{Scoring, SkyView},
 };
-use miniquad::conf;
+use macroquad::prelude::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,7 +16,7 @@ fn main() {
             cursive_window(sky_view);
         }
         "gui" => {
-            let gsky_view = GSkyView::new();
+            let gsky_view = GSkyView::new(Rc::clone(&scoring));
             graphics_window(gsky_view);
         }
         _ => {}
@@ -43,7 +43,7 @@ fn main() {
 }
 
 fn graphics_window(gsky_view: GSkyView) {
-    miniquad::start(conf::Conf::default(), || Box::new(gsky_view));
+    gview::main();
 }
 
 fn cursive_window(sky_view: SkyView) {

@@ -259,6 +259,10 @@ pub fn random_quaternion() -> nalgebra::Unit<nalgebra::Quaternion<f32>> {
     UnitQuaternion::from_euler_angles(rpy[0], rpy[1], rpy[2])
 }
 
+pub fn quat_coords_str(quat: UnitQuaternion<f32>) -> String {
+    format!("_ + {:.5} i + {:.5} j + {:.5} k", quat[0], quat[1], quat[2])
+}
+
 #[derive(Clone)]
 pub struct FoV {
     half_fov_x: f32,
