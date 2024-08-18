@@ -31,7 +31,7 @@ impl GSkyView {
             nstars,
             show_help: false,
         };
-        let fov = FoV::new(2.0, 2.0);
+        let fov = FoV::new(2.0, 1.0);
         let real_q = random_quaternion();
         Self {
             sky,
@@ -63,14 +63,13 @@ impl GSkyView {
             .flatten()
         {
             let (px, py, b, n) = fps;
-            let id = if self.options.show_star_names {
-                n.as_str()
-            } else {
-                "*"
-            };
             let px = (px as f32) / (x_max as f32) * screen_width();
             let py = (py as f32) / (y_max as f32) * screen_height();
-            draw_circle(px, py, 4.0, WHITE);
+            if self.options.show_star_names {
+                draw_text(&n, px, py, 18.0, WHITE);
+            } else {
+                draw_circle(px, py, 4.0, WHITE);
+            }
         }
     }
 }
@@ -81,32 +80,36 @@ pub async fn main() {
     let mut view = GSkyView::new(scoring);
 
     loop {
-        clear_background(BLACK);
-        view.draw_portion(view.real_q, 80, 80);
-
         let sign = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
         let sign_step: f32 = if sign { view.step } else { -view.step };
-        if is_key_down(KeyCode::P) {
-            view.rotate(-sign_step, 0.0, 0.0)
+        if is_key_pressed(KeyCode::P) {
+            view.rotate(-sign_step, 0.0, 0.0);
         }
-        if is_key_down(KeyCode::Y) {
-            view.rotate(0.0, sign_step, 0.0)
+        if is_key_pressed(KeyCode::Y) {
+            view.rotate(0.0, sign_step, 0.0);
         }
-        if is_key_down(KeyCode::R) {
-            view.rotate(0.0, 0.0, sign_step)
+        if is_key_pressed(KeyCode::R) {
+            view.rotate(0.0, 0.0, sign_step);
         }
-        if is_key_down(KeyCode::S) {
+        if is_key_pressed(KeyCode::S) {
             view.step *= 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
         }
-        if is_key_down(KeyCode::Z) {
+        if is_key_pressed(KeyCode::Z) {
             let scale = 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
             let fov = view.fov.rescale(scale);
             view.fov = fov;
         }
+        if is_key_pressed(KeyCode::V) {
+            view.options.show_star_names = !view.options.show_star_names;
+        }
 
-        if is_key_down(KeyCode::Q) {
+        if is_key_pressed(KeyCode::Q) {
             break;
         }
+
+        clear_background(BLACK);
+        view.draw_portion(view.real_q, 80, 80);
+
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
             view.options.nstars,
