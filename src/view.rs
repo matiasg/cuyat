@@ -32,7 +32,7 @@ pub struct SkyView {
 }
 
 impl SkyView {
-    pub fn new(catalog: Option<String>, nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
+    pub fn new(catalog: Option<String>, nstars: usize, scoring: Rc<RefCell<Scoring>>) -> Self {
         let target_q = random_quaternion();
         let sky = Sky::new(&catalog, nstars).with_attitude(target_q);
         let options = Options {
@@ -43,22 +43,18 @@ impl SkyView {
             show_help: false,
         };
         let fov = FoV::new(2.0, 2.0);
-        let scoring = Rc::new(RefCell::new(Scoring::default()));
         let real_q = random_quaternion();
-        (
-            Self {
-                sky,
-                fov,
-                target_q,
-                real_q,
-                step: 0.125,
-                scoring: Rc::clone(&scoring),
-                options,
-                headers: 3,
-                vmargin: 1,
-            },
-            scoring,
-        )
+        Self {
+            sky,
+            fov,
+            target_q,
+            real_q,
+            step: 0.125,
+            scoring: Rc::clone(&scoring),
+            options,
+            headers: 3,
+            vmargin: 1,
+        }
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
@@ -274,7 +270,7 @@ impl View for SkyView {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Scoring {
     pub total: Vec<f32>,
     pub moves: usize,
@@ -299,12 +295,14 @@ impl Scoring {
     pub fn get_score(&self) -> f32 {
         self.total.iter().sum::<f32>() / (self.total.len() as f32)
     }
-
-    fn default() -> Scoring {
-        Scoring {
-            total: vec![],
-            moves: 0,
-            counted_moves: 0,
-        }
-    }
 }
+
+// impl Default for Scoring {
+//     fn default() -> Scoring {
+//         Scoring {
+//             total: vec![],
+//             moves: 0,
+//             counted_moves: 0,
+//         }
+//     }
+// }
