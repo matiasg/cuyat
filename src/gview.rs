@@ -1,4 +1,5 @@
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+use core::time;
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc, thread};
 
 use macroquad::prelude::*;
 use nalgebra::UnitQuaternion;
@@ -105,17 +106,17 @@ pub async fn main() {
     loop {
         let sign = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
         let sign_step: f32 = if sign { view.step } else { -view.step };
-        if is_key_pressed(KeyCode::P) {
+        if is_key_down(KeyCode::P) {
             view.rotate(-sign_step, 0.0, 0.0);
         }
-        if is_key_pressed(KeyCode::Y) {
+        if is_key_down(KeyCode::Y) {
             view.rotate(0.0, sign_step, 0.0);
         }
-        if is_key_pressed(KeyCode::R) {
+        if is_key_down(KeyCode::R) {
             view.rotate(0.0, 0.0, sign_step);
         }
         if is_key_pressed(KeyCode::S) {
-            view.step *= 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
+            view.step *= 1.1892f32.powf(if sign { 1.0 } else { -1.0 });
         }
         if is_key_pressed(KeyCode::Z) {
             let scale = 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
@@ -161,6 +162,7 @@ pub async fn main() {
         draw_text(&header_1, 10.0, 20.0, 18.0, GRAY);
         draw_text(&quat_coords_str(view.real_q), 10.0, 38.0, 18.0, GRAY);
 
-        next_frame().await
+        thread::sleep(time::Duration::from_millis(50));
+        next_frame().await;
     }
 }
