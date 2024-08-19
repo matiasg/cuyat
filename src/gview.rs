@@ -1,5 +1,5 @@
 use core::time;
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc, thread};
+use std::{cell::RefCell, rc::Rc, thread};
 
 use macroquad::prelude::*;
 use nalgebra::UnitQuaternion;
@@ -64,6 +64,7 @@ impl GSkyView {
         x_max: f32,
         y_min: f32,
         y_max: f32,
+        font: Option<&Font>,
     ) {
         let width = (x_max - x_min) * 256.0;
         let height = (y_max - y_min) * 256.0;
@@ -76,10 +77,18 @@ impl GSkyView {
             let (px, py, _, n) = fps;
             let px = (x_min + (px as f32) / 256.0) * screen_width();
             let py = (y_min + (py as f32) / 256.0) * screen_height();
+            draw_circle(px, py, 4.0, WHITE);
             if self.options.show_star_names {
-                draw_text(&n, px, py, 18.0, WHITE);
-            } else {
-                draw_circle(px, py, 4.0, WHITE);
+                draw_text_ex(
+                    &n,
+                    px + 6.0,
+                    py,
+                    TextParams {
+                        font_size: 16,
+                        font,
+                        ..Default::default()
+                    },
+                );
             }
         }
     }
@@ -101,6 +110,7 @@ impl GSkyView {
 #[macroquad::main("Sky")]
 pub async fn main() {
     let scoring = Rc::new(RefCell::new(Scoring::default()));
+    let font = load_ttf_font("assets/Piazzolla-Medium.ttf").await.unwrap();
     let mut view = GSkyView::new(scoring);
 
     loop {
@@ -135,7 +145,7 @@ pub async fn main() {
         }
 
         clear_background(BLACK);
-        view.draw_portion(view.real_q, 0.0, 1.0, 0.0, 0.5);
+        view.draw_portion(view.real_q, 0.0, 1.0, 0.0, 0.5, Some(&font));
         draw_line(
             0.0,
             screen_height() / 2.0,
@@ -144,7 +154,7 @@ pub async fn main() {
             2.0,
             YELLOW,
         );
-        view.draw_portion(view.target_q, 0.0, 1.0, 0.5, 1.0);
+        view.draw_portion(view.target_q, 0.0, 1.0, 0.5, 1.0, Some(&font));
 
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
