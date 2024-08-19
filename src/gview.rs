@@ -74,10 +74,12 @@ impl GSkyView {
             .into_iter()
             .flatten()
         {
-            let (px, py, _, n) = fps;
+            let (px, py, b, n) = fps;
             let px = (x_min + (px as f32) / 256.0) * screen_width();
             let py = (y_min + (py as f32) / 256.0) * screen_height();
-            draw_circle(px, py, 4.0, WHITE);
+            let b = (b as f32 - 64.0) / 192.0;
+            let color = Color::new(b, b, b, 1.0);
+            draw_circle(px, py, 4.0, color);
             if self.options.show_star_names {
                 draw_text_ex(
                     &n,
