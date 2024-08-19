@@ -143,6 +143,9 @@ pub async fn main() {
             view.options.nstars = (view.options.nstars as f32 * mult).max(8.0) as usize;
             view.make_sky();
         }
+        if is_key_pressed(KeyCode::D) {
+            view.options.show_distance = !view.options.show_distance;
+        }
         if is_key_pressed(KeyCode::Space) {
             view.restart();
         }
@@ -177,7 +180,17 @@ pub async fn main() {
             (*view.scoring).borrow().get_score(),
         );
         draw_text(&header_1, 10.0, 20.0, 18.0, GRAY);
-        draw_text(&quat_coords_str(view.real_q), 10.0, 38.0, 18.0, GRAY);
+        let state_text = format!("State : {}", quat_coords_str(view.real_q));
+        draw_text(&state_text, 10.0, 38.0, 18.0, GRAY);
+        if view.options.show_distance {
+            let dist_text = format!(
+                "Target: {},    t/s: {},    distance: {:.6}",
+                quat_coords_str(view.target_q),
+                quat_coords_str(view.target_q / view.real_q),
+                view.distance()
+            );
+            draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
+        }
 
         thread::sleep(time::Duration::from_millis(50));
         next_frame().await;
