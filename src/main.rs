@@ -16,8 +16,7 @@ fn main() {
             cursive_window(sky_view);
         }
         "gui" => {
-            let gsky_view = GSkyView::new(Rc::clone(&scoring));
-            graphics_window(gsky_view);
+            graphics_window();
         }
         _ => {}
     };
@@ -42,7 +41,7 @@ fn main() {
     );
 }
 
-fn graphics_window(gsky_view: GSkyView) {
+fn graphics_window() {
     gview::main();
 }
 
