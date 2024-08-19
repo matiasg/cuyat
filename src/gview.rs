@@ -135,8 +135,13 @@ pub async fn main() {
             let fov = view.fov.rescale(scale);
             view.fov = fov;
         }
-        if is_key_pressed(KeyCode::V) {
+        if is_key_pressed(KeyCode::N) {
             view.options.show_star_names = !view.options.show_star_names;
+        }
+        if is_key_pressed(KeyCode::V) {
+            let mult: f32 = if sign { 1.25 } else { 0.8 };
+            view.options.nstars = (view.options.nstars as f32 * mult).max(8.0) as usize;
+            view.make_sky();
         }
         if is_key_pressed(KeyCode::Space) {
             view.restart();
