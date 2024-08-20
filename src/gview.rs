@@ -21,7 +21,7 @@ pub struct GSkyView {
 
 impl GSkyView {
     pub fn new(scoring: Rc<RefCell<Scoring>>) -> Self {
-        let catalog = Some("bsc5.csv".to_string());
+        let catalog = Some("assets/bsc5.csv".to_string());
         let nstars: usize = 1200;
         let target_q = random_quaternion();
         let sky = Sky::new(&catalog, nstars).with_attitude(target_q);

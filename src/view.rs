@@ -237,7 +237,7 @@ impl View for SkyView {
             }
             Event::Char('c') => {
                 self.options.catalog_filename = match self.options.catalog_filename {
-                    None => Some(String::from("bsc5.csv")),
+                    None => Some(String::from("assets/bsc5.csv")),
                     Some(_) => None,
                 };
                 self.restart();

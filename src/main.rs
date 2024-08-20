@@ -12,7 +12,11 @@ fn main() {
     let scoring = Rc::new(RefCell::new(Scoring::default()));
     match args[1].as_str() {
         "cli" => {
-            let sky_view = SkyView::new(Some(String::from("bsc5.csv")), 400, Rc::clone(&scoring));
+            let sky_view = SkyView::new(
+                Some(String::from("assets/bsc5.csv")),
+                400,
+                Rc::clone(&scoring),
+            );
             cursive_window(sky_view);
         }
         "gui" => {
