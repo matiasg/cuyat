@@ -109,7 +109,17 @@ impl GSkyView {
     }
 }
 
-#[macroquad::main("Sky")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "CuYAt".to_owned(),
+        fullscreen: false,
+        window_width: 1200,
+        window_height: 600,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 pub async fn main() {
     let scoring = Rc::new(RefCell::new(Scoring::default()));
     let font = load_ttf_font("assets/Piazzolla-Medium.ttf").await.unwrap();
@@ -155,16 +165,16 @@ pub async fn main() {
         }
 
         clear_background(BLACK);
-        view.draw_portion(view.real_q, 0.0, 1.0, 0.0, 0.5, Some(&font));
+        view.draw_portion(view.real_q, 0.0, 0.5, 0.0, 1.0, Some(&font));
         draw_line(
+            screen_width() / 2.0,
             0.0,
-            screen_height() / 2.0,
-            screen_width(),
-            screen_height() / 2.0,
+            screen_width() / 2.0,
+            screen_height(),
             2.0,
             YELLOW,
         );
-        view.draw_portion(view.target_q, 0.0, 1.0, 0.5, 1.0, Some(&font));
+        view.draw_portion(view.target_q, 0.5, 1.0, 0.0, 1.0, Some(&font));
 
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
