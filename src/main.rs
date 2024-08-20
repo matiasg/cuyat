@@ -1,7 +1,7 @@
 use std::{cell::RefCell, env, rc::Rc};
 
 use cuyat::{
-    gview::{self, GSkyView},
+    gview::{self},
     view::{Scoring, SkyView},
 };
 use macroquad::prelude::*;
@@ -20,7 +20,7 @@ fn main() {
             cursive_window(sky_view);
         }
         "gui" => {
-            graphics_window();
+            gview::main();
         }
         _ => {}
     };
@@ -43,10 +43,6 @@ fn main() {
         score.total.len(),
         score.get_score()
     );
-}
-
-fn graphics_window() {
-    gview::main();
 }
 
 fn cursive_window(sky_view: SkyView) {
