@@ -16,6 +16,7 @@ pub struct Options {
     pub(crate) catalog_filename: Option<String>,
     pub(crate) nstars: usize,
     pub(crate) show_help: bool,
+    pub(crate) only_target: bool,
 }
 
 #[derive(Clone)]
@@ -41,6 +42,7 @@ impl SkyView {
             catalog_filename: catalog,
             nstars,
             show_help: false,
+            only_target: false,
         };
         let fov = FoV::new(2.0, 2.0);
         let real_q = random_quaternion();
@@ -289,13 +291,3 @@ impl Scoring {
         self.total.iter().sum::<f32>() / (self.total.len() as f32)
     }
 }
-
-// impl Default for Scoring {
-//     fn default() -> Scoring {
-//         Scoring {
-//             total: vec![],
-//             moves: 0,
-//             counted_moves: 0,
-//         }
-//     }
-// }
