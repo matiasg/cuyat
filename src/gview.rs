@@ -31,6 +31,7 @@ impl GSkyView {
             catalog_filename: catalog,
             nstars,
             show_help: false,
+            only_target: false,
         };
         let fov = FoV::new(2.0, 1.0);
         let real_q = random_quaternion();
@@ -142,6 +143,9 @@ impl GSkyView {
         if is_key_pressed(KeyCode::Space) {
             self.restart();
         }
+        if is_key_pressed(KeyCode::T) {
+            self.options.only_target = !self.options.only_target;
+        }
 
         if is_key_pressed(KeyCode::Q) {
             return true;
@@ -152,15 +156,6 @@ impl GSkyView {
     fn draw(&self, font: &Font) {
         clear_background(BLACK);
         self.draw_portion(self.real_q, 0.0, 1.0, 0.0, 1.0, Some(font), 16);
-        // draw_line(
-        //     screen_width() / 2.0,
-        //     0.0,
-        //     screen_width() / 2.0,
-        //     screen_height(),
-        //     2.0,
-        //     YELLOW,
-        // );
-        // self.draw_portion(self.target_q, 0.5, 1.0, 0.0, 1.0, Some(font));
 
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
@@ -188,7 +183,11 @@ impl GSkyView {
             draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
         }
 
-        let (reltx, relty, reltw, relth) = (0.0, 0.7, 0.3, 0.3);
+        let (reltx, relty, reltw, relth, font_size) = if self.options.only_target {
+            (0.0, 0.0, 1.0, 1.0, 16)
+        } else {
+            (0.0, 0.7, 0.3, 0.3, 12)
+        };
         let (tx, ty, tw, th) = (
             reltx * screen_width(),
             relty * screen_height(),
@@ -206,7 +205,7 @@ impl GSkyView {
             relty,
             relty + relth,
             Some(font),
-            12,
+            font_size,
         );
     }
 }
