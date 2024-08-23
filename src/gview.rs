@@ -107,6 +107,86 @@ impl GSkyView {
         self.real_q = random_quaternion();
         self.step = 0.5;
     }
+    fn handle_keys(&mut self) -> bool {
+        let sign = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
+        let sign_step: f32 = if sign { self.step } else { -self.step };
+        if is_key_down(KeyCode::P) {
+            self.rotate(-sign_step, 0.0, 0.0);
+        }
+        if is_key_down(KeyCode::Y) {
+            self.rotate(0.0, sign_step, 0.0);
+        }
+        if is_key_down(KeyCode::R) {
+            self.rotate(0.0, 0.0, sign_step);
+        }
+        if is_key_pressed(KeyCode::S) {
+            self.step *= 1.1892f32.powf(if sign { 1.0 } else { -1.0 });
+        }
+        if is_key_pressed(KeyCode::Z) {
+            let scale = 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
+            let fov = self.fov.rescale(scale);
+            self.fov = fov;
+        }
+        if is_key_pressed(KeyCode::N) {
+            self.options.show_star_names = !self.options.show_star_names;
+        }
+        if is_key_pressed(KeyCode::V) {
+            let mult: f32 = if sign { 1.25 } else { 0.8 };
+            self.options.nstars = (self.options.nstars as f32 * mult).max(8.0) as usize;
+            self.make_sky();
+        }
+        if is_key_pressed(KeyCode::D) {
+            self.options.show_distance = !self.options.show_distance;
+        }
+        if is_key_pressed(KeyCode::Space) {
+            self.restart();
+        }
+
+        if is_key_pressed(KeyCode::Q) {
+            return true;
+        }
+        false
+    }
+
+    fn draw(&self, font: &Font) {
+        clear_background(BLACK);
+        self.draw_portion(self.real_q, 0.0, 0.5, 0.0, 1.0, Some(font));
+        draw_line(
+            screen_width() / 2.0,
+            0.0,
+            screen_width() / 2.0,
+            screen_height(),
+            2.0,
+            YELLOW,
+        );
+        self.draw_portion(self.target_q, 0.5, 1.0, 0.0, 1.0, Some(font));
+
+        let header_1 = format!(
+            "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
+            self.options.nstars,
+            self.options
+                .catalog_filename
+                .clone()
+                .unwrap_or("random".to_string()),
+            self.step,
+            self.fov.zoom(),
+            (*self.scoring).borrow().moves,
+            (*self.scoring).borrow().total.len(),
+            (*self.scoring).borrow().get_score(),
+        );
+        draw_text(&header_1, 10.0, 20.0, 18.0, GRAY);
+        let state_text = format!("State : {}", quat_coords_str(self.real_q));
+        draw_text(&state_text, 10.0, 38.0, 18.0, GRAY);
+        if self.options.show_distance {
+            let dist_text = format!(
+                "Target: {},    t/s: {},    distance: {:.6}",
+                quat_coords_str(self.target_q),
+                quat_coords_str(self.target_q / self.real_q),
+                self.distance()
+            );
+            draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
+        }
+    }
 }
 
 fn window_conf() -> Conf {
@@ -119,87 +199,6 @@ fn window_conf() -> Conf {
     }
 }
 
-fn handle_keys(view: &mut GSkyView) -> bool {
-    let sign = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
-    let sign_step: f32 = if sign { view.step } else { -view.step };
-    if is_key_down(KeyCode::P) {
-        view.rotate(-sign_step, 0.0, 0.0);
-    }
-    if is_key_down(KeyCode::Y) {
-        view.rotate(0.0, sign_step, 0.0);
-    }
-    if is_key_down(KeyCode::R) {
-        view.rotate(0.0, 0.0, sign_step);
-    }
-    if is_key_pressed(KeyCode::S) {
-        view.step *= 1.1892f32.powf(if sign { 1.0 } else { -1.0 });
-    }
-    if is_key_pressed(KeyCode::Z) {
-        let scale = 1.0905f32.powf(if sign { 1.0 } else { -1.0 });
-        let fov = view.fov.rescale(scale);
-        view.fov = fov;
-    }
-    if is_key_pressed(KeyCode::N) {
-        view.options.show_star_names = !view.options.show_star_names;
-    }
-    if is_key_pressed(KeyCode::V) {
-        let mult: f32 = if sign { 1.25 } else { 0.8 };
-        view.options.nstars = (view.options.nstars as f32 * mult).max(8.0) as usize;
-        view.make_sky();
-    }
-    if is_key_pressed(KeyCode::D) {
-        view.options.show_distance = !view.options.show_distance;
-    }
-    if is_key_pressed(KeyCode::Space) {
-        view.restart();
-    }
-
-    if is_key_pressed(KeyCode::Q) {
-        return true;
-    }
-    false
-}
-
-fn draw(view: &GSkyView, font: &Font) {
-    clear_background(BLACK);
-    view.draw_portion(view.real_q, 0.0, 0.5, 0.0, 1.0, Some(font));
-    draw_line(
-        screen_width() / 2.0,
-        0.0,
-        screen_width() / 2.0,
-        screen_height(),
-        2.0,
-        YELLOW,
-    );
-    view.draw_portion(view.target_q, 0.5, 1.0, 0.0, 1.0, Some(font));
-
-    let header_1 = format!(
-        "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
-        view.options.nstars,
-        view.options
-            .catalog_filename
-            .clone()
-            .unwrap_or("random".to_string()),
-        view.step,
-        view.fov.zoom(),
-        (*view.scoring).borrow().moves,
-        (*view.scoring).borrow().total.len(),
-        (*view.scoring).borrow().get_score(),
-    );
-    draw_text(&header_1, 10.0, 20.0, 18.0, GRAY);
-    let state_text = format!("State : {}", quat_coords_str(view.real_q));
-    draw_text(&state_text, 10.0, 38.0, 18.0, GRAY);
-    if view.options.show_distance {
-        let dist_text = format!(
-            "Target: {},    t/s: {},    distance: {:.6}",
-            quat_coords_str(view.target_q),
-            quat_coords_str(view.target_q / view.real_q),
-            view.distance()
-        );
-        draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
-    }
-}
-
 #[macroquad::main(window_conf)]
 pub async fn main() {
     let scoring = Rc::new(RefCell::new(Scoring::default()));
@@ -207,12 +206,11 @@ pub async fn main() {
     let mut view = GSkyView::new(scoring);
 
     loop {
-        let must_stop = handle_keys(&mut view);
+        let must_stop = view.handle_keys();
         if must_stop {
             break;
         }
-
-        draw(&view, &font);
+        view.draw(&font);
 
         thread::sleep(time::Duration::from_millis(50));
         next_frame().await;
