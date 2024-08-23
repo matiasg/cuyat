@@ -117,20 +117,7 @@ impl SkyView {
     }
 
     fn show_help(&self, p: &Printer, style: ColorStyle) {
-        let help_lines = [
-            "y/Y  : yaw",
-            "p/P  : pitch",
-            "r/R  : roll",
-            "z/Z  : zoom",
-            "s/S  : scale",
-            "d    : show/hide distance",
-            "n    : show/hide star names",
-            "c    : use real/random catalog",
-            "v/V  : number of stars",
-            "space: score and restart",
-            "?    : show/hide this help",
-            "q    : end playing the game",
-        ];
+        let help_lines = get_help_lines();
         let max_len = help_lines.iter().map(|l| l.len()).max().unwrap();
         for (i, line) in help_lines.iter().enumerate() {
             let padded_line = format!("{}{}", line, " ".repeat(max_len - line.len()));
@@ -160,6 +147,24 @@ impl SkyView {
         let fov = self.fov.rescale(direction);
         self.fov = fov;
     }
+}
+
+pub fn get_help_lines() -> [String; 13] {
+    [
+        "y/Y  : yaw".to_owned(),
+        "p/P  : pitch".to_owned(),
+        "r/R  : roll".to_owned(),
+        "z/Z  : zoom".to_owned(),
+        "s/S  : scale".to_owned(),
+        "d    : show/hide distance".to_owned(),
+        "n    : show/hide star names".to_owned(),
+        "c    : use real/random catalog".to_owned(),
+        "v/V  : number of stars".to_owned(),
+        "space: score and restart".to_owned(),
+        "t    : show only target".to_owned(),
+        "h    : show/hide this help".to_owned(),
+        "q    : end playing the game".to_owned(),
+    ]
 }
 
 impl View for SkyView {
@@ -256,7 +261,7 @@ impl View for SkyView {
                 self.restart();
                 return EventResult::Ignored;
             }
-            Event::Char('?') => {
+            Event::Char('h') => {
                 self.options.show_help = !self.options.show_help;
             }
             _ => return EventResult::Ignored,

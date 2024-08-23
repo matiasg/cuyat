@@ -6,7 +6,7 @@ use nalgebra::UnitQuaternion;
 
 use crate::{
     sky::{quat_coords_str, random_quaternion, FoV, Sky},
-    view::{Options, Scoring},
+    view::{get_help_lines, Options, Scoring},
 };
 
 pub struct GSkyView {
@@ -140,6 +140,9 @@ impl GSkyView {
         if is_key_pressed(KeyCode::D) {
             self.options.show_distance = !self.options.show_distance;
         }
+        if is_key_pressed(KeyCode::H) {
+            self.options.show_help = !self.options.show_help;
+        }
         if is_key_pressed(KeyCode::Space) {
             self.restart();
         }
@@ -207,6 +210,26 @@ impl GSkyView {
             Some(font),
             font_size,
         );
+
+        if self.options.show_help {
+            let (reltx, relty, reltw, relth, font_size) = (0.6, 0.1, 0.4, 0.8, 20);
+            draw_rectangle(
+                reltx * screen_width(),
+                relty * screen_height(),
+                reltw * screen_width(),
+                relth * screen_height(),
+                BLACK,
+            );
+            for (i, line) in get_help_lines().iter().enumerate() {
+                draw_text(
+                    line,
+                    reltx * screen_width(),
+                    relty * screen_width() + (font_size * i) as f32 * 1.12,
+                    font_size as f32,
+                    WHITE,
+                );
+            }
+        }
     }
 }
 

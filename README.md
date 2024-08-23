@@ -31,7 +31,7 @@ For that, you use your keyboard like this:
 | v/V | number of stars    |
 | space | score this game and start another |
 | t   | show only the target |
-| ?   | show help          |
+| h   | show help          |
 | q | end playing the game |
 
 - See definitions of [Roll, Pitch and Yaw](https://en.wikipedia.org/wiki/Aircraft_principal_axes).
