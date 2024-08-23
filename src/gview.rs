@@ -65,6 +65,7 @@ impl GSkyView {
         y_min: f32,
         y_max: f32,
         font: Option<&Font>,
+        font_size: u16,
     ) {
         let width = (x_max - x_min) * 256.0;
         let height = (y_max - y_min) * 256.0;
@@ -86,7 +87,7 @@ impl GSkyView {
                     px + 6.0,
                     py,
                     TextParams {
-                        font_size: 16,
+                        font_size,
                         font,
                         ..Default::default()
                     },
@@ -150,16 +151,16 @@ impl GSkyView {
 
     fn draw(&self, font: &Font) {
         clear_background(BLACK);
-        self.draw_portion(self.real_q, 0.0, 0.5, 0.0, 1.0, Some(font));
-        draw_line(
-            screen_width() / 2.0,
-            0.0,
-            screen_width() / 2.0,
-            screen_height(),
-            2.0,
-            YELLOW,
-        );
-        self.draw_portion(self.target_q, 0.5, 1.0, 0.0, 1.0, Some(font));
+        self.draw_portion(self.real_q, 0.0, 1.0, 0.0, 1.0, Some(font), 16);
+        // draw_line(
+        //     screen_width() / 2.0,
+        //     0.0,
+        //     screen_width() / 2.0,
+        //     screen_height(),
+        //     2.0,
+        //     YELLOW,
+        // );
+        // self.draw_portion(self.target_q, 0.5, 1.0, 0.0, 1.0, Some(font));
 
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
@@ -186,6 +187,27 @@ impl GSkyView {
             );
             draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
         }
+
+        let (reltx, relty, reltw, relth) = (0.0, 0.7, 0.3, 0.3);
+        let (tx, ty, tw, th) = (
+            reltx * screen_width(),
+            relty * screen_height(),
+            reltw * screen_width(),
+            relth * screen_width(),
+        );
+
+        draw_rectangle(tx, ty, tw, th, BLACK);
+        draw_line(tx, ty, tx + tw, ty, 1.0, YELLOW);
+        draw_line(tx + tw, ty, tx + tw, ty + th, 1.0, YELLOW);
+        self.draw_portion(
+            self.target_q,
+            reltx,
+            reltx + reltw,
+            relty,
+            relty + relth,
+            Some(font),
+            12,
+        );
     }
 }
 
