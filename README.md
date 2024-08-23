@@ -30,6 +30,7 @@ For that, you use your keyboard like this:
 | c   | use real/random catalog |
 | v/V | number of stars    |
 | space | score this game and start another |
+| t   | show only the target |
 | ?   | show help          |
 | q | end playing the game |
 
