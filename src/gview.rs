@@ -151,6 +151,7 @@ impl GSkyView {
         }
 
         if is_key_pressed(KeyCode::Q) {
+            self.restart();
             return true;
         }
         false
