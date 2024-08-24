@@ -7,15 +7,16 @@ use cursive::{
 };
 use nalgebra::UnitQuaternion;
 
-use crate::sky::{random_quaternion, FoV, Sky};
+use crate::sky::{quat_coords_str, random_quaternion, FoV, Sky};
 
 #[derive(Clone)]
-struct Options {
-    show_distance: bool,
-    show_star_names: bool,
-    catalog_filename: Option<String>,
-    nstars: usize,
-    show_help: bool,
+pub struct Options {
+    pub(crate) show_distance: bool,
+    pub(crate) show_star_names: bool,
+    pub(crate) catalog_filename: Option<String>,
+    pub(crate) nstars: usize,
+    pub(crate) show_help: bool,
+    pub(crate) only_target: bool,
 }
 
 #[derive(Clone)]
@@ -32,7 +33,7 @@ pub struct SkyView {
 }
 
 impl SkyView {
-    pub fn new(catalog: Option<String>, nstars: usize) -> (Self, Rc<RefCell<Scoring>>) {
+    pub fn new(catalog: Option<String>, nstars: usize, scoring: Rc<RefCell<Scoring>>) -> Self {
         let target_q = random_quaternion();
         let sky = Sky::new(&catalog, nstars).with_attitude(target_q);
         let options = Options {
@@ -41,24 +42,21 @@ impl SkyView {
             catalog_filename: catalog,
             nstars,
             show_help: false,
+            only_target: false,
         };
         let fov = FoV::new(2.0, 2.0);
-        let scoring = Rc::new(RefCell::new(Scoring::default()));
         let real_q = random_quaternion();
-        (
-            Self {
-                sky,
-                fov,
-                target_q,
-                real_q,
-                step: 0.125,
-                scoring: Rc::clone(&scoring),
-                options,
-                headers: 3,
-                vmargin: 1,
-            },
-            scoring,
-        )
+        Self {
+            sky,
+            fov,
+            target_q,
+            real_q,
+            step: 0.125,
+            scoring: Rc::clone(&scoring),
+            options,
+            headers: 3,
+            vmargin: 1,
+        }
     }
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
@@ -88,10 +86,6 @@ impl SkyView {
         }
     }
 
-    fn _quat_coords(quat: UnitQuaternion<f32>) -> String {
-        format!("_ + {:.5} i + {:.5} j + {:.5} k", quat[0], quat[1], quat[2])
-    }
-
     fn draw_header(&self, p: &Printer, style: ColorStyle) {
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
@@ -109,37 +103,21 @@ impl SkyView {
         p.with_color(style, |printer| printer.print((1, 0), header_1.as_str()));
         let (real_q, difference, distance) = if self.options.show_distance {
             (
-                format!("State:  {}", Self::_quat_coords(self.real_q)),
-                format!(
-                    ",   t/s: {}",
-                    Self::_quat_coords(self.target_q / self.real_q)
-                ),
+                format!("State:  {}", quat_coords_str(self.real_q)),
+                format!(",   t/s: {}", quat_coords_str(self.target_q / self.real_q)),
                 format!(",   distance: {:.6}", self.distance()),
             )
         } else {
             (String::from(""), String::from(""), String::from(""))
         };
-        let header_2 = format!("Target: {}{}", Self::_quat_coords(self.target_q), distance);
+        let header_2 = format!("Target: {}{}", quat_coords_str(self.target_q), distance);
         p.with_color(style, |printer| printer.print((1, 1), header_2.as_str()));
         let header_3 = format!("{}{}", real_q, difference);
         p.with_color(style, |printer| printer.print((1, 2), header_3.as_str()));
     }
 
     fn show_help(&self, p: &Printer, style: ColorStyle) {
-        let help_lines = [
-            "y/Y  : yaw",
-            "p/P  : pitch",
-            "r/R  : roll",
-            "z/Z  : zoom",
-            "s/S  : scale",
-            "d    : show/hide distance",
-            "n    : show/hide star names",
-            "c    : use real/random catalog",
-            "v/V  : number of stars",
-            "space: score and restart",
-            "?    : show/hide this help",
-            "q    : end playing the game",
-        ];
+        let help_lines = get_help_lines();
         let max_len = help_lines.iter().map(|l| l.len()).max().unwrap();
         for (i, line) in help_lines.iter().enumerate() {
             let padded_line = format!("{}{}", line, " ".repeat(max_len - line.len()));
@@ -169,6 +147,24 @@ impl SkyView {
         let fov = self.fov.rescale(direction);
         self.fov = fov;
     }
+}
+
+pub fn get_help_lines() -> [String; 13] {
+    [
+        "y/Y  : yaw".to_owned(),
+        "p/P  : pitch".to_owned(),
+        "r/R  : roll".to_owned(),
+        "z/Z  : zoom".to_owned(),
+        "s/S  : scale".to_owned(),
+        "d    : show/hide distance".to_owned(),
+        "n    : show/hide star names".to_owned(),
+        "c    : use real/random catalog".to_owned(),
+        "v/V  : number of stars".to_owned(),
+        "space: score and restart".to_owned(),
+        "t    : show only target".to_owned(),
+        "h    : show/hide this help".to_owned(),
+        "q    : end playing the game".to_owned(),
+    ]
 }
 
 impl View for SkyView {
@@ -248,7 +244,7 @@ impl View for SkyView {
             }
             Event::Char('c') => {
                 self.options.catalog_filename = match self.options.catalog_filename {
-                    None => Some(String::from("bsc5.csv")),
+                    None => Some(String::from("assets/bsc5.csv")),
                     Some(_) => None,
                 };
                 self.restart();
@@ -265,7 +261,7 @@ impl View for SkyView {
                 self.restart();
                 return EventResult::Ignored;
             }
-            Event::Char('?') => {
+            Event::Char('h') => {
                 self.options.show_help = !self.options.show_help;
             }
             _ => return EventResult::Ignored,
@@ -274,7 +270,7 @@ impl View for SkyView {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Scoring {
     pub total: Vec<f32>,
     pub moves: usize,
@@ -282,11 +278,11 @@ pub struct Scoring {
 }
 
 impl Scoring {
-    fn add_move(&mut self) {
+    pub fn add_move(&mut self) {
         self.moves += 1;
     }
 
-    fn score_and_reset(&mut self, add: f32) {
+    pub fn score_and_reset(&mut self, add: f32) {
         self.total.push(add * (self.moves as f32 + 20.0));
         self.counted_moves += self.moves;
         self.moves = 0;
@@ -298,13 +294,5 @@ impl Scoring {
 
     pub fn get_score(&self) -> f32 {
         self.total.iter().sum::<f32>() / (self.total.len() as f32)
-    }
-
-    fn default() -> Scoring {
-        Scoring {
-            total: vec![],
-            moves: 0,
-            counted_moves: 0,
-        }
     }
 }
