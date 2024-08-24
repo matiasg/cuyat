@@ -59,7 +59,7 @@ impl GSkyView {
                 * self.real_q;
         (*self.scoring).borrow_mut().add_move();
     }
-    fn draw_portion(
+    fn draw_stars(
         &self,
         quat: UnitQuaternion<f32>,
         x_min: f32,
@@ -160,8 +160,64 @@ impl GSkyView {
 
     fn draw(&self, font: &Font) {
         clear_background(BLACK);
-        self.draw_portion(self.real_q, 0.0, 1.0, 0.0, 1.0, Some(font), 16);
+        self.draw_stars(self.real_q, 0.0, 1.0, 0.0, 1.0, Some(font), 16);
+        self.draw_target_rectangle(font);
+        self.draw_help();
+        self.show_state(font);
+    }
 
+    fn draw_help(&self) {
+        if self.options.show_help {
+            let (reltx, relty, reltw, relth, font_size) = (0.6, 0.1, 0.4, 0.8, 20);
+            draw_rectangle(
+                reltx * screen_width(),
+                relty * screen_height(),
+                reltw * screen_width(),
+                relth * screen_height(),
+                BLACK,
+            );
+            for (i, line) in get_help_lines().iter().enumerate() {
+                draw_text(
+                    line,
+                    reltx * screen_width(),
+                    relty * screen_width() + (font_size * i) as f32 * 1.12,
+                    font_size as f32,
+                    WHITE,
+                );
+            }
+        }
+    }
+
+    fn draw_target_rectangle(&self, font: &Font) {
+        let (reltx, relty, reltw, relth, font_size) = if self.options.only_target {
+            (0.0, 0.0, 1.0, 1.0, 16)
+        } else {
+            (0.0, 0.7, 0.3, 0.3, 12)
+        };
+        let (tx, ty, tw, th) = (
+            reltx * screen_width(),
+            relty * screen_height(),
+            reltw * screen_width(),
+            relth * screen_width(),
+        );
+
+        draw_rectangle(tx, ty, tw, th, BLACK);
+        if !self.options.only_target {
+            draw_line(tx, ty, tx + tw, ty, 1.0, YELLOW);
+            draw_line(tx + tw, ty, tx + tw, ty + th, 1.0, YELLOW);
+        }
+        self.draw_stars(
+            self.target_q,
+            reltx,
+            reltx + reltw,
+            relty,
+            relty + relth,
+            Some(font),
+            font_size,
+        );
+    }
+
+    fn show_state(&self, font: &Font) {
         let header_1 = format!(
             "Stars: {}, catalog: {}. Step: {:.4}, zoom: {:.3}, moves: {}, games: {}, score: {:.6}",
             self.options.nstars,
@@ -186,51 +242,6 @@ impl GSkyView {
                 self.distance()
             );
             draw_text(&dist_text, 10.0, 56.0, 18.0, GRAY);
-        }
-
-        let (reltx, relty, reltw, relth, font_size) = if self.options.only_target {
-            (0.0, 0.0, 1.0, 1.0, 16)
-        } else {
-            (0.0, 0.7, 0.3, 0.3, 12)
-        };
-        let (tx, ty, tw, th) = (
-            reltx * screen_width(),
-            relty * screen_height(),
-            reltw * screen_width(),
-            relth * screen_width(),
-        );
-
-        draw_rectangle(tx, ty, tw, th, BLACK);
-        draw_line(tx, ty, tx + tw, ty, 1.0, YELLOW);
-        draw_line(tx + tw, ty, tx + tw, ty + th, 1.0, YELLOW);
-        self.draw_portion(
-            self.target_q,
-            reltx,
-            reltx + reltw,
-            relty,
-            relty + relth,
-            Some(font),
-            font_size,
-        );
-
-        if self.options.show_help {
-            let (reltx, relty, reltw, relth, font_size) = (0.6, 0.1, 0.4, 0.8, 20);
-            draw_rectangle(
-                reltx * screen_width(),
-                relty * screen_height(),
-                reltw * screen_width(),
-                relth * screen_height(),
-                BLACK,
-            );
-            for (i, line) in get_help_lines().iter().enumerate() {
-                draw_text(
-                    line,
-                    reltx * screen_width(),
-                    relty * screen_width() + (font_size * i) as f32 * 1.12,
-                    font_size as f32,
-                    WHITE,
-                );
-            }
         }
     }
 }
