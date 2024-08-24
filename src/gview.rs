@@ -2,6 +2,7 @@ use core::time;
 use std::{cell::RefCell, rc::Rc, thread};
 
 use macroquad::prelude::*;
+use macroquad::Window;
 use nalgebra::UnitQuaternion;
 
 use crate::{
@@ -244,11 +245,13 @@ fn window_conf() -> Conf {
     }
 }
 
-#[macroquad::main(window_conf)]
-pub async fn main() {
-    let scoring = Rc::new(RefCell::new(Scoring::default()));
+pub fn launch(scoring: Rc<RefCell<Scoring>>) {
+    Window::from_config(window_conf(), main_loop(scoring));
+}
+
+pub async fn main_loop(scoring: Rc<RefCell<Scoring>>) {
     let font = load_ttf_font("assets/Piazzolla-Medium.ttf").await.unwrap();
-    let mut view = GSkyView::new(scoring);
+    let mut view = GSkyView::new(Rc::clone(&scoring));
 
     loop {
         let must_stop = view.handle_keys();

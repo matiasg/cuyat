@@ -20,7 +20,7 @@ fn main() {
             cursive_window(sky_view);
         }
         "gui" => {
-            gview::main();
+            gview::launch(Rc::clone(&scoring));
         }
         _ => {}
     };
